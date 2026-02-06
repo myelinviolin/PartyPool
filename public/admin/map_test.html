@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimization Map Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        #testMap { height: 500px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Optimization Map Test</h2>
+
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-map"></i> Test Map</h5>
+            </div>
+            <div class="card-body">
+                <div id="testMap"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5>Map Status</h5>
+            </div>
+            <div class="card-body">
+                <div id="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize test map
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusDiv = document.getElementById('status');
+
+            try {
+                statusDiv.innerHTML += '<p>✅ Initializing Leaflet map...</p>';
+
+                // Create map
+                const map = L.map('testMap').setView([43.0731, -89.4012], 12);
+                statusDiv.innerHTML += '<p>✅ Map object created</p>';
+
+                // Add tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+                statusDiv.innerHTML += '<p>✅ Tile layer added</p>';
+
+                // Add event marker with gold star
+                const eventMarker = L.marker([43.0731, -89.4012], {
+                    icon: L.divIcon({
+                        html: '<div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 50%; border: 3px solid #FF8C00; box-shadow: 0 3px 10px rgba(255, 215, 0, 0.3);"><i class="fas fa-star" style="color: white; font-size: 24px;"></i></div>',
+                        iconSize: [48, 48],
+                        iconAnchor: [24, 24],
+                        popupAnchor: [0, -24]
+                    })
+                }).addTo(map);
+                statusDiv.innerHTML += '<p>✅ Event marker added</p>';
+
+                // Add sample driver marker
+                const driverMarker = L.marker([43.08, -89.38], {
+                    icon: L.divIcon({
+                        html: '<div style="width: 36px; height: 36px; background: white; border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; border: 3px solid #28a745;"><i class="fas fa-car" style="color: #28a745; font-size: 18px;"></i></div>',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18],
+                        popupAnchor: [0, -18]
+                    })
+                }).addTo(map).bindPopup('Sample Driver');
+                statusDiv.innerHTML += '<p>✅ Driver marker added</p>';
+
+                // Add sample rider marker
+                const riderMarker = L.marker([43.06, -89.42], {
+                    icon: L.divIcon({
+                        html: '<div style="width: 36px; height: 36px; background: white; border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; border: 3px solid #17a2b8;"><i class="fas fa-user-friends" style="color: #17a2b8; font-size: 18px;"></i></div>',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18],
+                        popupAnchor: [0, -18]
+                    })
+                }).addTo(map).bindPopup('Sample Rider');
+                statusDiv.innerHTML += '<p>✅ Rider marker added</p>';
+
+                statusDiv.innerHTML += '<hr><p class="text-success"><strong>✅ Map is working correctly!</strong></p>';
+                statusDiv.innerHTML += '<p>If you can see the map above with markers, the optimization map should work in the dashboard.</p>';
+
+            } catch (error) {
+                statusDiv.innerHTML += '<p class="text-danger">❌ Error: ' + error.message + '</p>';
+                console.error('Map initialization error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
