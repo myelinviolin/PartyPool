@@ -589,9 +589,9 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             });
 
-            // Step 2: Mark assigned drivers as blue and add badges
+            // Step 2: Mark assigned drivers as blue and add appropriate badges
             if (optimizationResult.routes) {
-                // First pass: Mark all assigned drivers
+                // First pass: Mark all assigned drivers with appropriate badges
                 optimizationResult.routes.forEach((route, index) => {
                     console.log(`Processing route ${index + 1}, driver: ${route.driver_name}`);
 
@@ -627,9 +627,17 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         const statusDiv = driverCard.querySelector('.assignment-status');
                         if (statusDiv) {
-                            statusDiv.innerHTML = `<span class="badge bg-primary">
-                                <i class="fas fa-check"></i> Assigned Driver
-                            </span>`;
+                            // Check if driver has passengers to determine badge text
+                            const hasPassengers = route.passengers && route.passengers.length > 0;
+                            if (hasPassengers) {
+                                statusDiv.innerHTML = `<span class="badge bg-primary">
+                                    <i class="fas fa-car"></i> Driving - picking up passengers
+                                </span>`;
+                            } else {
+                                statusDiv.innerHTML = `<span class="badge bg-primary">
+                                    <i class="fas fa-car-side"></i> Driving Solo
+                                </span>`;
+                            }
                         }
                     } else {
                         console.warn(`Could not find card for driver: ${route.driver_name}`);
@@ -671,7 +679,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 const statusDiv = passengerCard.querySelector('.assignment-status');
                                 if (statusDiv) {
                                     statusDiv.innerHTML = `<span class="badge bg-secondary">
-                                        <i class="fas fa-user-friends"></i> Riding with ${route.driver_name}
+                                        <i class="fas fa-user-friends"></i> Riding with #${route.driver_name}
                                     </span>`;
                                 }
                             } else {
