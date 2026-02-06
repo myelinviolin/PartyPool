@@ -121,8 +121,13 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             flex-direction: column;
             justify-content: space-between;
         }
-        .willing-driver { background: #d4edda; }
-        .assigned-driver { background: #cce5ff; }
+        /* Before optimization colors */
+        .can-drive { background: #d4edda; } /* Green for drivers */
+        .need-ride { background: #fff3cd; } /* Yellow for riders */
+
+        /* After optimization colors */
+        .assigned-driver { background: #cce5ff; } /* Blue for assigned drivers */
+        .assigned-rider { background: #fff3cd; } /* Yellow for riders */
         #optimizationMap { height: 400px; border-radius: 8px; }
         .optimization-result {
             background: #f8f9fa;
@@ -247,24 +252,23 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="row" id="participantsList">
                             <?php foreach ($users as $user): ?>
                             <div class="col-md-6 mb-2">
-                                <div class="participant-card card <?php echo $user['willing_to_drive'] ? 'willing-driver' : ''; ?>"
+                                <div class="participant-card card <?php echo $user['willing_to_drive'] ? 'can-drive' : 'need-ride'; ?>"
                                      data-user-id="<?php echo $user['id']; ?>"
-                                     data-user-name="<?php echo htmlspecialchars($user['name']); ?>">
+                                     data-user-name="<?php echo htmlspecialchars($user['name']); ?>"
+                                     data-can-drive="<?php echo $user['willing_to_drive'] ? 'true' : 'false'; ?>">
                                     <div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="participant-badges">
-                                                <strong><?php echo htmlspecialchars($user['name']); ?></strong>
-                                                <?php if ($user['willing_to_drive']): ?>
-                                                    <span class="badge bg-success ms-1">
-                                                        <i class="fas fa-car"></i> Can Drive
-                                                    </span>
-                                                    <?php if ($user['vehicle_capacity']): ?>
-                                                        <span class="badge bg-info"><?php echo $user['vehicle_capacity']; ?> seats</span>
-                                                    <?php endif; ?>
+                                        <div class="mb-1">
+                                            <strong><?php echo htmlspecialchars($user['name']); ?></strong>
+                                            <?php if ($user['willing_to_drive']): ?>
+                                                <span class="badge bg-success ms-1">
+                                                    <i class="fas fa-car"></i> Can Drive
+                                                </span>
+                                                <?php if ($user['vehicle_capacity']): ?>
+                                                    <span class="badge bg-info"><?php echo $user['vehicle_capacity']; ?> seats</span>
                                                 <?php endif; ?>
-                                                <span class="assignment-status"></span>
-                                            </div>
+                                            <?php endif; ?>
                                         </div>
+                                        <div class="assignment-status mb-1"></div>
                                         <small class="text-muted d-block">
                                             <i class="fas fa-envelope"></i> <?php echo htmlspecialchars($user['email']); ?>
                                         </small>
@@ -567,12 +571,22 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         function updateParticipantCards(optimizationResult) {
-            // First, clear all existing assignment statuses
+            // First, clear all existing assignment statuses and reset colors
             document.querySelectorAll('.participant-card').forEach(card => {
-                card.classList.remove('assigned-driver');
-                const statusSpan = card.querySelector('.assignment-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = '';
+                card.classList.remove('assigned-driver', 'assigned-rider');
+
+                // Reset to original colors based on capability
+                if (card.dataset.canDrive === 'true') {
+                    card.classList.add('can-drive');
+                    card.classList.remove('need-ride');
+                } else {
+                    card.classList.add('need-ride');
+                    card.classList.remove('can-drive');
+                }
+
+                const statusDiv = card.querySelector('.assignment-status');
+                if (statusDiv) {
+                    statusDiv.innerHTML = '';
                 }
             });
 
@@ -582,10 +596,13 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     // Find and update driver card
                     const driverCard = document.querySelector(`.participant-card[data-user-name="${route.driver_name}"]`);
                     if (driverCard) {
+                        // Remove old color classes and add assigned-driver
+                        driverCard.classList.remove('can-drive', 'need-ride');
                         driverCard.classList.add('assigned-driver');
-                        const statusSpan = driverCard.querySelector('.assignment-status');
-                        if (statusSpan) {
-                            statusSpan.innerHTML = `<span class="badge bg-primary ms-1">
+
+                        const statusDiv = driverCard.querySelector('.assignment-status');
+                        if (statusDiv) {
+                            statusDiv.innerHTML = `<span class="badge bg-primary">
                                 <i class="fas fa-check"></i> Assigned Driver
                             </span>`;
                         }
@@ -596,9 +613,13 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         route.passengers.forEach(passenger => {
                             const passengerCard = document.querySelector(`.participant-card[data-user-name="${passenger.name}"]`);
                             if (passengerCard) {
-                                const statusSpan = passengerCard.querySelector('.assignment-status');
-                                if (statusSpan) {
-                                    statusSpan.innerHTML = `<span class="badge bg-secondary ms-1">
+                                // Remove old color classes and add assigned-rider
+                                passengerCard.classList.remove('can-drive', 'need-ride');
+                                passengerCard.classList.add('assigned-rider');
+
+                                const statusDiv = passengerCard.querySelector('.assignment-status');
+                                if (statusDiv) {
+                                    statusDiv.innerHTML = `<span class="badge bg-secondary">
                                         <i class="fas fa-user-friends"></i> Riding with ${route.driver_name}
                                     </span>`;
                                 }
@@ -711,8 +732,8 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div>
                                 <h6>
                                     <i class="fas fa-car text-success"></i>
-                                    Driver: ${route.driver_name}
-                                    <span class="badge bg-secondary ms-2">${route.vehicle}</span>
+                                    ${route.driver_name}
+                                    ${route.vehicle ? `<span class="badge bg-secondary ms-2">${route.vehicle}</span>` : ''}
                                 </h6>
                             </div>
                             <div class="text-end">
