@@ -47,13 +47,55 @@ class EnhancedCarpoolOptimizer {
         // Load participants
         $this->loadParticipants();
 
-        // If no target vehicles specified, minimize vehicles used
+        // If no target vehicles specified, calculate optimal number
         if ($this->target_vehicles === null) {
+            // Start with minimum vehicles
             $this->target_vehicles = $this->calculateMinimumVehicles();
-        }
 
-        // Run optimization algorithm with target vehicles
-        $result = $this->runOptimizationAlgorithm();
+            // Run initial optimization
+            $result = $this->runOptimizationAlgorithm();
+
+            // Check if any driver has overhead > 20 minutes
+            $max_overhead = 0;
+            if (isset($result['routes'])) {
+                foreach ($result['routes'] as $route) {
+                    if (isset($route['overhead_time'])) {
+                        $overhead = intval($route['overhead_time']);
+                        if ($overhead > $max_overhead) {
+                            $max_overhead = $overhead;
+                        }
+                    }
+                }
+            }
+
+            // If overhead is too high, increase vehicles and re-optimize
+            while ($max_overhead > 20 && $this->target_vehicles < count($this->drivers)) {
+                $this->target_vehicles++;
+                $result = $this->runOptimizationAlgorithm();
+
+                // Recalculate max overhead
+                $max_overhead = 0;
+                if (isset($result['routes'])) {
+                    foreach ($result['routes'] as $route) {
+                        if (isset($route['overhead_time'])) {
+                            $overhead = intval($route['overhead_time']);
+                            if ($overhead > $max_overhead) {
+                                $max_overhead = $overhead;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Add note about overhead optimization
+            if (isset($result['success']) && $result['success']) {
+                $result['overhead_optimized'] = true;
+                $result['max_overhead'] = $max_overhead;
+            }
+        } else {
+            // Run with specified target vehicles
+            $result = $this->runOptimizationAlgorithm();
+        }
 
         // Save to database
         $this->saveAssignments($result);
@@ -101,7 +143,7 @@ class EnhancedCarpoolOptimizer {
             return 0;
         }
 
-        // Minimum is either all drivers or enough to carry everyone
+        // Calculate basic minimum based on capacity
         $min_vehicles = 0;
         $cumulative_capacity = 0;
 
@@ -119,7 +161,12 @@ class EnhancedCarpoolOptimizer {
             }
         }
 
-        return min($min_vehicles, count($this->drivers));
+        // Consider overhead constraints - use more vehicles if needed
+        // Rule of thumb: each vehicle handles about 3-4 participants to keep overhead low
+        $overhead_based_minimum = max(1, ceil($total_participants / 3.5));
+
+        // Return the larger of the two minimums to prioritize lower overhead
+        return min(max($min_vehicles, $overhead_based_minimum), count($this->drivers));
     }
 
     private function runOptimizationAlgorithm() {
@@ -172,28 +219,67 @@ class EnhancedCarpoolOptimizer {
     }
 
     private function performEnhancedClustering($num_clusters) {
-        // Use K-means-like clustering to create exactly num_clusters groups
+        // Use geographic clustering to minimize travel overhead
         $clusters = [];
 
-        // Initialize clusters with random participants
+        // Initialize clusters
         for ($i = 0; $i < $num_clusters; $i++) {
             $clusters[$i] = [];
         }
 
-        // Assign each participant to nearest cluster
+        // Sort participants by location (simple geographic grouping)
+        $participants_with_coords = [];
+        $participants_without_coords = [];
+
         foreach ($this->participants as $participant) {
-            // Find the cluster with the fewest participants (load balancing)
-            $cluster_index = 0;
-            $min_size = count($clusters[0]);
-
-            foreach ($clusters as $idx => $cluster) {
-                if (count($cluster) < $min_size) {
-                    $cluster_index = $idx;
-                    $min_size = count($cluster);
-                }
+            if (!empty($participant['lat']) && !empty($participant['lng'])) {
+                $participants_with_coords[] = $participant;
+            } else {
+                $participants_without_coords[] = $participant;
             }
+        }
 
-            $clusters[$cluster_index][] = $participant;
+        // Sort by latitude then longitude for geographic grouping
+        usort($participants_with_coords, function($a, $b) {
+            // Create geographic zones
+            $lat_diff = $a['lat'] - $b['lat'];
+            if (abs($lat_diff) > 0.01) {
+                return $lat_diff > 0 ? 1 : -1;
+            }
+            return $a['lng'] > $b['lng'] ? 1 : -1;
+        });
+
+        // Distribute participants evenly across clusters, keeping nearby people together
+        $all_participants = array_merge($participants_with_coords, $participants_without_coords);
+
+        // Calculate ideal cluster size
+        $ideal_size = ceil(count($all_participants) / $num_clusters);
+
+        $current_cluster = 0;
+        foreach ($all_participants as $participant) {
+            // Move to next cluster if current is at ideal size
+            if (count($clusters[$current_cluster]) >= $ideal_size && $current_cluster < $num_clusters - 1) {
+                $current_cluster++;
+            }
+            $clusters[$current_cluster][] = $participant;
+        }
+
+        // Balance clusters if last one is too small
+        if ($num_clusters > 1 && count($clusters[$num_clusters - 1]) < 2) {
+            // Redistribute last cluster's participants
+            $last_cluster = array_pop($clusters);
+            foreach ($last_cluster as $participant) {
+                // Add to smallest cluster
+                $min_idx = 0;
+                $min_size = count($clusters[0]);
+                for ($i = 1; $i < count($clusters); $i++) {
+                    if (count($clusters[$i]) < $min_size) {
+                        $min_idx = $i;
+                        $min_size = count($clusters[$i]);
+                    }
+                }
+                $clusters[$min_idx][] = $participant;
+            }
         }
 
         return $clusters;

@@ -594,11 +594,25 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 console.log('Optimization result:', result);
 
                 if (result.success) {
-                    statusDiv.innerHTML = `<div class="alert alert-success mb-0 mt-2">
+                    let statusMessage = `<div class="alert alert-success mb-0 mt-2">
                         <i class="fas fa-check"></i> Optimization complete!
-                        Using ${result.vehicles_needed} vehicles
-                        ${result.target_vehicles ? ' (Target: ' + result.target_vehicles + ')' : ' (Minimized)'}
-                    </div>`;
+                        Using ${result.vehicles_needed} vehicles`;
+
+                    if (result.overhead_optimized) {
+                        statusMessage += ` <span class="badge bg-info ms-2">
+                            <i class="fas fa-bolt"></i> Overhead optimized: max ${result.max_overhead || 0} min
+                        </span>`;
+                    }
+
+                    statusMessage += `</div>`;
+
+                    if (result.overhead_optimized && result.max_overhead <= 20) {
+                        statusMessage += `<div class="alert alert-info mb-0 mt-2">
+                            <i class="fas fa-info-circle"></i> All drivers have overhead under 20 minutes!
+                        </div>`;
+                    }
+
+                    statusDiv.innerHTML = statusMessage;
                     displayEnhancedResults(result);
                     document.getElementById('resultsCard').style.display = 'block';
 
