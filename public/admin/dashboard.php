@@ -120,11 +120,6 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             padding: 15px;
             margin-bottom: 15px;
             border: 2px solid transparent;
-            transition: all 0.3s;
-        }
-        .optimization-result.border-warning {
-            border-color: #ffc107;
-            background: #fffef5;
         }
         .route-badge { background: #667eea; color: white; padding: 2px 8px; border-radius: 12px; margin: 0 2px; }
     </style>
@@ -646,7 +641,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 const isHighOverhead = route.overhead_time && parseInt(route.overhead_time) > 20;
 
                 html += `
-                    <div class="optimization-result ${isHighOverhead ? 'border-warning' : ''}">
+                    <div class="optimization-result">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <h6>
@@ -660,7 +655,6 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <span class="badge ${isHighOverhead ? 'bg-warning' : 'bg-info'}">
                                         <i class="fas fa-clock"></i>
                                         +${route.overhead_time} overhead
-                                        (${route.overhead_percentage} longer)
                                     </span>
                                 ` : ''}
                             </div>
@@ -686,16 +680,6 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </small>
                             </div>
                         </div>
-
-                        ${isHighOverhead ? `
-                            <div class="alert alert-warning mt-2 mb-0 py-1 px-2">
-                                <small>
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    This driver has ${route.overhead_time} extra driving due to pickups.
-                                    Consider using more vehicles to reduce individual burden.
-                                </small>
-                            </div>
-                        ` : ''}
                     </div>
                 `;
             });
@@ -705,25 +689,16 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="card-body">
                         <h6 class="mb-3"><i class="fas fa-sliders-h"></i> Adjust Optimization:</h6>
                         <div class="row align-items-end">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label">Try Different Vehicle Count:</label>
                                 <input type="number" id="newTargetVehicles" class="form-control"
                                        min="1" max="<?php echo count($drivers); ?>"
-                                       placeholder="Enter number (current: ${assignments.vehicles_needed})">
-                                <small class="text-muted">Available drivers: <?php echo count($drivers); ?></small>
+                                       value="${assignments.vehicles_needed}">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <button class="btn btn-warning" onclick="rerunWithVehicles()">
                                     <i class="fas fa-redo"></i> Rerun with New Vehicle Count
                                 </button>
-                            </div>
-                            <div class="col-md-4">
-                                ${assignments.vehicles_needed > 1 && assignments.routes.some(r => parseInt(r.overhead_time) > 20) ? `
-                                    <div class="alert alert-warning py-2 mb-0">
-                                        <small><i class="fas fa-lightbulb"></i>
-                                        Try ${assignments.vehicles_needed + 1} vehicles to reduce overhead</small>
-                                    </div>
-                                ` : ''}
                             </div>
                         </div>
                     </div>
