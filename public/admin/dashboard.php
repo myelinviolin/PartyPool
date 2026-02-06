@@ -109,8 +109,18 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
     </style>
     <style>
         .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .participant-card { transition: transform 0.2s; cursor: pointer; }
+        .participant-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+            min-height: 100px; /* Ensure consistent height */
+            height: 100%;
+        }
         .participant-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .participant-card .card-body {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
         .willing-driver { background: #d4edda; }
         .assigned-driver { background: #cce5ff; }
         #optimizationMap { height: 400px; border-radius: 8px; }
@@ -237,11 +247,12 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="row" id="participantsList">
                             <?php foreach ($users as $user): ?>
                             <div class="col-md-6 mb-2">
-                                <div class="participant-card card <?php echo $user['willing_to_drive'] ? 'willing-driver' : ''; ?>
-                                            <?php echo $user['is_assigned_driver'] ? 'assigned-driver' : ''; ?>">
+                                <div class="participant-card card <?php echo $user['willing_to_drive'] ? 'willing-driver' : ''; ?>"
+                                     data-user-id="<?php echo $user['id']; ?>"
+                                     data-user-name="<?php echo htmlspecialchars($user['name']); ?>">
                                     <div class="card-body p-2">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <div>
+                                            <div class="participant-badges">
                                                 <strong><?php echo htmlspecialchars($user['name']); ?></strong>
                                                 <?php if ($user['willing_to_drive']): ?>
                                                     <span class="badge bg-success ms-1">
@@ -251,11 +262,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                                         <span class="badge bg-info"><?php echo $user['vehicle_capacity']; ?> seats</span>
                                                     <?php endif; ?>
                                                 <?php endif; ?>
-                                                <?php if ($user['is_assigned_driver']): ?>
-                                                    <span class="badge bg-primary">
-                                                        <i class="fas fa-check"></i> Assigned Driver
-                                                    </span>
-                                                <?php endif; ?>
+                                                <span class="assignment-status"></span>
                                             </div>
                                         </div>
                                         <small class="text-muted d-block">
@@ -559,6 +566,49 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         }
 
+        function updateParticipantCards(optimizationResult) {
+            // First, clear all existing assignment statuses
+            document.querySelectorAll('.participant-card').forEach(card => {
+                card.classList.remove('assigned-driver');
+                const statusSpan = card.querySelector('.assignment-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = '';
+                }
+            });
+
+            // Mark assigned drivers and their passengers
+            if (optimizationResult.routes) {
+                optimizationResult.routes.forEach(route => {
+                    // Find and update driver card
+                    const driverCard = document.querySelector(`.participant-card[data-user-name="${route.driver_name}"]`);
+                    if (driverCard) {
+                        driverCard.classList.add('assigned-driver');
+                        const statusSpan = driverCard.querySelector('.assignment-status');
+                        if (statusSpan) {
+                            statusSpan.innerHTML = `<span class="badge bg-primary ms-1">
+                                <i class="fas fa-check"></i> Assigned Driver
+                            </span>`;
+                        }
+                    }
+
+                    // Update passenger cards to show they're assigned to this driver
+                    if (route.passengers) {
+                        route.passengers.forEach(passenger => {
+                            const passengerCard = document.querySelector(`.participant-card[data-user-name="${passenger.name}"]`);
+                            if (passengerCard) {
+                                const statusSpan = passengerCard.querySelector('.assignment-status');
+                                if (statusSpan) {
+                                    statusSpan.innerHTML = `<span class="badge bg-secondary ms-1">
+                                        <i class="fas fa-user-friends"></i> Riding with ${route.driver_name}
+                                    </span>`;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
         async function runOptimization(targetVehicles = null) {
             const statusDiv = document.getElementById('optimizationStatus');
             statusDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Running optimization...';
@@ -614,6 +664,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     statusDiv.innerHTML = statusMessage;
                     displayEnhancedResults(result);
+                    updateParticipantCards(result);  // Update participant cards
                     document.getElementById('resultsCard').style.display = 'block';
 
                     // Draw routes on map
