@@ -646,13 +646,13 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
                     Optimized ${assignments.total_participants} participants into ${assignments.vehicles_needed} vehicles
-                    ${assignments.target_vehicles ? `(Target was ${assignments.target_vehicles})` : '(Minimized vehicles)'}
-                    - Saved ${assignments.vehicles_saved} vehicles
+                    - Saved ${assignments.vehicles_saved} ${assignments.vehicles_saved === 1 ? 'vehicle' : 'vehicles'}
                 </div>
             `;
 
             assignments.routes.forEach((route, index) => {
                 const isHighOverhead = route.overhead_time && parseInt(route.overhead_time) > 20;
+                const hasPassengers = route.passengers && route.passengers.length > 0;
 
                 html += `
                     <div class="optimization-result">
@@ -665,10 +665,16 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </h6>
                             </div>
                             <div class="text-end">
-                                ${route.direct_time ? `
+                                ${hasPassengers && route.direct_time ? `
                                     <span class="badge ${isHighOverhead ? 'bg-warning' : 'bg-info'}">
                                         <i class="fas fa-clock"></i>
                                         +${route.overhead_time} overhead
+                                    </span>
+                                ` : ''}
+                                ${!hasPassengers ? `
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-arrow-right"></i>
+                                        Direct to destination
                                     </span>
                                 ` : ''}
                             </div>
@@ -679,16 +685,28 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 ${route.departure_time ? `<div><strong>Departure:</strong> ${route.departure_time}</div>` : ''}
                                 <div>
                                     <strong>Route:</strong>
-                                    ${route.passengers.map(p => `<span class="route-badge">${p.name}</span>`).join(' → ')}
+                                    ${hasPassengers ?
+                                        route.passengers.map(p => `<span class="route-badge">${p.name}</span>`).join(' → ') :
+                                        '<span class="text-muted">Drive directly to destination</span>'
+                                    }
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <small class="d-block">
-                                    <i class="fas fa-route"></i> Direct: ${route.direct_distance || '0'} mi in ${route.direct_time || '0'}
-                                </small>
-                                <small class="d-block">
-                                    <i class="fas fa-users"></i> Carpool: ${route.total_distance} mi in ${route.estimated_travel_time}
-                                </small>
+                                ${hasPassengers ? `
+                                    <small class="d-block">
+                                        <i class="fas fa-route"></i> Direct: ${route.direct_distance || '0'} mi in ${route.direct_time || '0'}
+                                    </small>
+                                    <small class="d-block">
+                                        <i class="fas fa-users"></i> Carpool: ${route.total_distance} mi in ${route.estimated_travel_time}
+                                    </small>
+                                ` : `
+                                    <small class="d-block">
+                                        <i class="fas fa-route"></i> Distance: ${route.direct_distance || '0'} mi
+                                    </small>
+                                    <small class="d-block">
+                                        <i class="fas fa-clock"></i> Travel time: ${route.direct_time || '0'}
+                                    </small>
+                                `}
                                 <small class="d-block">
                                     <i class="fas fa-user-friends"></i> ${route.passengers.length} / ${route.capacity} passengers
                                 </small>

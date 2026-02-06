@@ -55,11 +55,12 @@ class EnhancedCarpoolOptimizer {
             // Run initial optimization
             $result = $this->runOptimizationAlgorithm();
 
-            // Check if any driver has overhead > 20 minutes
+            // Check if any driver with passengers has overhead > 20 minutes
             $max_overhead = 0;
             if (isset($result['routes'])) {
                 foreach ($result['routes'] as $route) {
-                    if (isset($route['overhead_time'])) {
+                    // Only check overhead for drivers with passengers
+                    if (isset($route['has_passengers']) && $route['has_passengers'] && isset($route['overhead_time'])) {
                         $overhead = intval($route['overhead_time']);
                         if ($overhead > $max_overhead) {
                             $max_overhead = $overhead;
@@ -400,29 +401,53 @@ class EnhancedCarpoolOptimizer {
                     }
                 }
 
-                // Calculate overhead (extra time due to carpooling)
-                $overhead_time = $cumulative_time - $direct_time;
-                $overhead_percentage = $direct_time > 0 ? round(($overhead_time / $direct_time) * 100) : 0;
-
                 // Calculate departure time
                 $departure_time = $this->calculateDepartureTime($cumulative_time);
 
-                $assignments[] = [
-                    'driver_id' => $best_driver['id'],
-                    'driver_name' => $best_driver['name'],
-                    'vehicle' => ($best_driver['vehicle_make'] ?? 'Vehicle') . ' ' .
-                                ($best_driver['vehicle_model'] ?? ''),
-                    'capacity' => $best_driver['vehicle_capacity'],
-                    'passengers' => $passengers,
-                    'total_distance' => round($route_distance, 2),
-                    'departure_time' => date('g:i A', strtotime($departure_time)),
-                    'estimated_travel_time' => round($cumulative_time) . ' minutes',
-                    'direct_distance' => round($direct_distance, 2),
-                    'direct_time' => round($direct_time) . ' minutes',
-                    'overhead_time' => round($overhead_time) . ' minutes',
-                    'overhead_percentage' => $overhead_percentage . '%',
-                    'coordinates' => $coordinates
-                ];
+                // Check if driver has passengers
+                if (count($passengers) > 0) {
+                    // Calculate overhead (extra time due to carpooling)
+                    $overhead_time = $cumulative_time - $direct_time;
+                    $overhead_percentage = $direct_time > 0 ? round(($overhead_time / $direct_time) * 100) : 0;
+
+                    $assignments[] = [
+                        'driver_id' => $best_driver['id'],
+                        'driver_name' => $best_driver['name'],
+                        'vehicle' => ($best_driver['vehicle_make'] ?? 'Vehicle') . ' ' .
+                                    ($best_driver['vehicle_model'] ?? ''),
+                        'capacity' => $best_driver['vehicle_capacity'],
+                        'passengers' => $passengers,
+                        'total_distance' => round($route_distance, 2),
+                        'departure_time' => date('g:i A', strtotime($departure_time)),
+                        'estimated_travel_time' => round($cumulative_time) . ' minutes',
+                        'direct_distance' => round($direct_distance, 2),
+                        'direct_time' => round($direct_time) . ' minutes',
+                        'overhead_time' => round($overhead_time) . ' minutes',
+                        'overhead_percentage' => $overhead_percentage . '%',
+                        'coordinates' => $coordinates,
+                        'has_passengers' => true
+                    ];
+                } else {
+                    // Driver with no passengers - drives directly
+                    $assignments[] = [
+                        'driver_id' => $best_driver['id'],
+                        'driver_name' => $best_driver['name'],
+                        'vehicle' => ($best_driver['vehicle_make'] ?? 'Vehicle') . ' ' .
+                                    ($best_driver['vehicle_model'] ?? ''),
+                        'capacity' => $best_driver['vehicle_capacity'],
+                        'passengers' => [],
+                        'total_distance' => round($direct_distance, 2),
+                        'departure_time' => date('g:i A', strtotime($departure_time)),
+                        'estimated_travel_time' => round($direct_time) . ' minutes',
+                        'direct_distance' => round($direct_distance, 2),
+                        'direct_time' => round($direct_time) . ' minutes',
+                        'overhead_time' => '0 minutes',
+                        'overhead_percentage' => '0%',
+                        'coordinates' => $coordinates,
+                        'has_passengers' => false,
+                        'direct_to_destination' => true
+                    ];
+                }
 
                 // Mark driver as assigned
                 $update_query = "UPDATE users SET is_assigned_driver = TRUE WHERE id = :driver_id";
