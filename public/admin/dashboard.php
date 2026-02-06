@@ -123,11 +123,11 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         /* Before optimization colors */
         .can-drive { background: #d4edda; } /* Green for drivers */
-        .need-ride { background: #fff3cd; } /* Yellow for riders */
+        .need-ride { background: #ffe4d1; } /* Orange for riders */
 
         /* After optimization colors */
         .assigned-driver { background: #cce5ff; } /* Blue for assigned drivers */
-        .assigned-rider { background: #fff3cd; } /* Yellow for riders */
+        .assigned-rider { background: #ffe4d1; } /* Orange for riders */
         #optimizationMap { height: 400px; border-radius: 8px; }
         .optimization-result {
             background: #f8f9fa;
@@ -266,6 +266,10 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 <?php if ($user['vehicle_capacity']): ?>
                                                     <span class="badge bg-info"><?php echo $user['vehicle_capacity']; ?> seats</span>
                                                 <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning ms-1">
+                                                    <i class="fas fa-user"></i> Needs Ride
+                                                </span>
                                             <?php endif; ?>
                                         </div>
                                         <div class="assignment-status mb-1"></div>
