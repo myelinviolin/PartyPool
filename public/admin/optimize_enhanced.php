@@ -96,8 +96,13 @@ class EnhancedCarpoolOptimizer {
             $total_capacity += $driver['vehicle_capacity'];
         }
 
+        // If no drivers available, return 0
+        if (empty($this->drivers)) {
+            return 0;
+        }
+
         // Minimum is either all drivers or enough to carry everyone
-        $min_vehicles = 1;
+        $min_vehicles = 0;
         $cumulative_capacity = 0;
 
         // Sort drivers by capacity (largest first)
@@ -177,13 +182,17 @@ class EnhancedCarpoolOptimizer {
 
         // Assign each participant to nearest cluster
         foreach ($this->participants as $participant) {
-            // Simple round-robin for now, but could use geographic clustering
-            $cluster_index = count($clusters[0]);
+            // Find the cluster with the fewest participants (load balancing)
+            $cluster_index = 0;
+            $min_size = count($clusters[0]);
+
             foreach ($clusters as $idx => $cluster) {
-                if (count($cluster) < count($clusters[$cluster_index])) {
+                if (count($cluster) < $min_size) {
                     $cluster_index = $idx;
+                    $min_size = count($cluster);
                 }
             }
+
             $clusters[$cluster_index][] = $participant;
         }
 
