@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Party Location Verification</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Party Location Status Check</h2>
+        <div id="status" class="alert alert-info">Checking...</div>
+        <pre id="debug"></pre>
+    </div>
+
+    <script>
+        fetch('/api/events.php?id=1')
+            .then(response => response.json())
+            .then(data => {
+                const status = document.getElementById('status');
+                const debug = document.getElementById('debug');
+
+                if (data.event_lat && data.event_lng) {
+                    status.className = 'alert alert-success';
+                    status.innerHTML = `✅ Party location is set!<br>
+                        Location: ${data.event_address}<br>
+                        Coordinates: ${data.event_lat}, ${data.event_lng}<br>
+                        <strong>The gold star should now appear on the home page map!</strong>`;
+                } else {
+                    status.className = 'alert alert-danger';
+                    status.innerHTML = '❌ Party location NOT set - admin needs to configure';
+                }
+
+                debug.textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('status').className = 'alert alert-danger';
+                document.getElementById('status').textContent = 'Error: ' + error;
+            });
+    </script>
+</body>
+</html>

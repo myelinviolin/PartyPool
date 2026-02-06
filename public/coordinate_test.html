@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinate Debug Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .custom-marker {
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            width: 48px !important;
+            height: 48px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #FF8C00;
+        }
+        .custom-marker i {
+            color: white;
+            font-size: 24px !important;
+        }
+        .event-marker {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Coordinate Debug Test</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Expected Location:</h4>
+                <div id="expected" class="alert alert-info"></div>
+                <h4>Actual Marker Location:</h4>
+                <div id="actual" class="alert alert-warning"></div>
+                <h4>Validation:</h4>
+                <div id="validation" class="alert"></div>
+            </div>
+            <div class="col-md-6">
+                <h4>Debug Info:</h4>
+                <pre id="debug" style="font-size: 12px;"></pre>
+            </div>
+        </div>
+        <div id="map" style="height: 500px; border: 2px solid blue;"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let eventMarker = null;
+        let debugInfo = [];
+
+        // Initialize map
+        map = L.map('map').setView([43.0731, -89.4012], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        debugInfo.push('Map initialized at Madison center: [43.0731, -89.4012]');
+
+        // Fetch event data
+        fetch('/api/events.php?id=1')
+            .then(response => response.json())
+            .then(data => {
+                debugInfo.push('Raw API response received');
+                debugInfo.push('event_lat type: ' + typeof data.event_lat);
+                debugInfo.push('event_lng type: ' + typeof data.event_lng);
+                debugInfo.push('event_lat raw value: "' + data.event_lat + '"');
+                debugInfo.push('event_lng raw value: "' + data.event_lng + '"');
+
+                const expectedLat = 43.0747;
+                const expectedLng = -89.3985;
+                document.getElementById('expected').innerHTML = `
+                    615 State Street, Madison, WI<br>
+                    Lat: ${expectedLat}, Lng: ${expectedLng}
+                `;
+
+                if (data.event_lat && data.event_lng) {
+                    // Test different parsing methods
+                    const lat1 = parseFloat(data.event_lat);
+                    const lng1 = parseFloat(data.event_lng);
+                    const lat2 = Number(data.event_lat);
+                    const lng2 = Number(data.event_lng);
+                    const lat3 = +data.event_lat;
+                    const lng3 = +data.event_lng;
+
+                    debugInfo.push('parseFloat lat: ' + lat1 + ' (type: ' + typeof lat1 + ')');
+                    debugInfo.push('parseFloat lng: ' + lng1 + ' (type: ' + typeof lng1 + ')');
+                    debugInfo.push('Number lat: ' + lat2);
+                    debugInfo.push('Number lng: ' + lng2);
+                    debugInfo.push('Unary+ lat: ' + lat3);
+                    debugInfo.push('Unary+ lng: ' + lng3);
+
+                    // Use the parsed values
+                    const lat = lat1;
+                    const lng = lng1;
+
+                    document.getElementById('actual').innerHTML = `
+                        Lat: ${lat}, Lng: ${lng}<br>
+                        Type: ${typeof lat}, ${typeof lng}
+                    `;
+
+                    // Validate coordinates
+                    const latDiff = Math.abs(lat - expectedLat);
+                    const lngDiff = Math.abs(lng - expectedLng);
+                    const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111; // rough km conversion
+
+                    const validationDiv = document.getElementById('validation');
+                    if (latDiff < 0.001 && lngDiff < 0.001) {
+                        validationDiv.className = 'alert alert-success';
+                        validationDiv.innerHTML = '✅ Coordinates match expected location!';
+                    } else {
+                        validationDiv.className = 'alert alert-danger';
+                        validationDiv.innerHTML = `❌ Coordinates are off by ~${distance.toFixed(2)} km<br>
+                            Lat diff: ${latDiff}<br>
+                            Lng diff: ${lngDiff}`;
+                    }
+
+                    debugInfo.push('Creating marker at: [' + lat + ', ' + lng + ']');
+
+                    // Add marker using exact same code as main app
+                    eventMarker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: '<i class="fas fa-star"></i>',
+                            iconSize: [48, 48],
+                            className: 'custom-marker event-marker',
+                            iconAnchor: [24, 24],
+                            popupAnchor: [0, -24]
+                        })
+                    }).addTo(map);
+
+                    eventMarker.bindPopup(`
+                        <strong>Party Location</strong><br>
+                        ${data.event_name}<br>
+                        ${data.event_address}<br>
+                        Lat: ${lat}<br>
+                        Lng: ${lng}
+                    `).openPopup();
+
+                    // Center and zoom to marker
+                    map.setView([lat, lng], 15);
+
+                    // Add a red circle to show exact location
+                    L.circle([lat, lng], {
+                        color: 'red',
+                        fillColor: '#f03',
+                        fillOpacity: 0.3,
+                        radius: 100
+                    }).addTo(map);
+
+                    debugInfo.push('Marker added to map');
+
+                    // Check if marker is within map bounds
+                    setTimeout(() => {
+                        const bounds = map.getBounds();
+                        const markerLatLng = eventMarker.getLatLng();
+
+                        debugInfo.push('Map bounds: ' + bounds.toBBoxString());
+                        debugInfo.push('Marker position: ' + markerLatLng.toString());
+
+                        if (bounds.contains(markerLatLng)) {
+                            debugInfo.push('✅ Marker IS within visible map bounds');
+                        } else {
+                            debugInfo.push('❌ Marker is OUTSIDE visible map bounds!');
+                        }
+
+                        // Update debug display
+                        document.getElementById('debug').textContent = debugInfo.join('\n');
+                    }, 1000);
+
+                } else {
+                    document.getElementById('actual').innerHTML = 'No coordinates in API response';
+                    document.getElementById('validation').className = 'alert alert-danger';
+                    document.getElementById('validation').innerHTML = '❌ No coordinates found!';
+                }
+
+                // Update debug display
+                document.getElementById('debug').textContent = debugInfo.join('\n');
+            })
+            .catch(error => {
+                debugInfo.push('ERROR: ' + error);
+                document.getElementById('debug').textContent = debugInfo.join('\n');
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Marker Position Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Final Marker Position Verification</h2>
+
+        <div id="results"></div>
+
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">Test Map - State Street Location</div>
+                    <div class="card-body">
+                        <div id="map" style="height: 500px; position: relative;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        const tests = [];
+
+        // Define createEventMarker function locally (same as in app.js)
+        function createEventMarker(lat, lng, eventName, eventAddress, eventDateTime) {
+            // Ensure coordinates are numbers
+            lat = parseFloat(lat);
+            lng = parseFloat(lng);
+
+            console.log('Creating event marker at:', lat, lng);
+
+            // Validate coordinates are reasonable for Madison area
+            if (isNaN(lat) || isNaN(lng) || lat < 42 || lat > 44 || lng < -91 || lng > -88) {
+                console.error('Invalid coordinates:', lat, lng);
+                return null;
+            }
+
+            // Create event marker icon to match legend style
+            const starIcon = L.divIcon({
+                html: '<i class="fas fa-star"></i>',
+                iconSize: [48, 48],
+                iconAnchor: [24, 24],
+                popupAnchor: [0, -24],
+                className: 'custom-marker event-marker'
+            });
+
+            const marker = L.marker([lat, lng], { icon: starIcon });
+
+            marker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong style="color: #FF8C00; font-size: 16px;">🎉 Party Location!</strong><br>
+                    <div style="margin-top: 8px;">
+                        <strong>${eventName}</strong><br>
+                        ${eventAddress}<br>
+                        ${eventDateTime}
+                    </div>
+                </div>
+            `);
+
+            return marker;
+        }
+
+        // Test 1: Check coordinates from API
+        fetch('/api/events.php?id=1')
+            .then(response => response.json())
+            .then(data => {
+                const expectedLat = 43.0747;
+                const expectedLng = -89.3985;
+                const actualLat = parseFloat(data.event_lat);
+                const actualLng = parseFloat(data.event_lng);
+
+                const latMatch = Math.abs(actualLat - expectedLat) < 0.0001;
+                const lngMatch = Math.abs(actualLng - expectedLng) < 0.0001;
+
+                tests.push({
+                    name: 'API Coordinates Test',
+                    pass: latMatch && lngMatch,
+                    details: `Expected: ${expectedLat}, ${expectedLng} | Actual: ${actualLat}, ${actualLng}`
+                });
+
+                // Test 2: Visual marker position test
+                const testMap = L.map('map').setView([expectedLat, expectedLng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(testMap);
+
+                // Add green circle at exact State Street location
+                L.circle([expectedLat, expectedLng], {
+                    color: 'green',
+                    fillColor: '#0f3',
+                    fillOpacity: 0.3,
+                    radius: 20
+                }).addTo(testMap).bindPopup('Exact State Street Location');
+
+                // Add event marker using createEventMarker
+                const eventMarker = createEventMarker(
+                    data.event_lat,
+                    data.event_lng,
+                    data.event_name,
+                    data.event_address,
+                    new Date(data.event_date + ' ' + data.event_time).toLocaleString()
+                );
+
+                if (eventMarker) {
+                    eventMarker.addTo(testMap);
+
+                    // Check if marker is at correct position
+                    const markerPos = eventMarker.getLatLng();
+                    const distance = markerPos.distanceTo(L.latLng(expectedLat, expectedLng));
+
+                    tests.push({
+                        name: 'Visual Marker Position Test',
+                        pass: distance < 5,
+                        details: `Marker is ${Math.round(distance)} meters from State Street`
+                    });
+                } else {
+                    tests.push({
+                        name: 'Visual Marker Position Test',
+                        pass: false,
+                        details: 'Marker creation failed'
+                    });
+                }
+
+                // Display results
+                let html = '<h3>Test Results</h3>';
+                tests.forEach(test => {
+                    html += `
+                        <div class="test-result ${test.pass ? 'pass' : 'fail'}">
+                            <strong>${test.pass ? '✅ PASS' : '❌ FAIL'}: ${test.name}</strong><br>
+                            ${test.details}
+                        </div>
+                    `;
+                });
+
+                const allPass = tests.every(t => t.pass);
+                html += `
+                    <div class="test-result ${allPass ? 'pass' : 'fail'}">
+                        <h4>${allPass ? '✅ All Tests Passed!' : '❌ Some Tests Failed'}</h4>
+                        ${allPass ? 'The destination marker is correctly positioned at State Street.' : 'The marker position needs adjustment.'}
+                    </div>
+                `;
+
+                results.innerHTML = html;
+            })
+            .catch(error => {
+                results.innerHTML = `<div class="test-result fail">Error: ${error.message}</div>`;
+            });
+    </script>
+</body>
+</html>

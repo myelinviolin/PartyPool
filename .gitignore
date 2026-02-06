@@ -1,0 +1,29 @@
+# Database configuration
+public/config/database.php
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Uploaded files (if any)
+public/uploads/
+public/storage/

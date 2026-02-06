@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Update Event - Live</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Live Update Event Test</h2>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Test Scenarios</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>1. Test Name Change:</h6>
+                        <button class="btn btn-sm btn-info mb-2" onclick="setTestData('name')">
+                            Set Test Name
+                        </button>
+
+                        <h6>2. Test Address Changes:</h6>
+                        <button class="btn btn-sm btn-info mb-1" onclick="setTestData('monona')">
+                            Monona Terrace
+                        </button>
+                        <button class="btn btn-sm btn-info mb-1" onclick="setTestData('memorial')">
+                            Memorial Union
+                        </button>
+                        <button class="btn btn-sm btn-info mb-1" onclick="setTestData('university')">
+                            University Ave
+                        </button>
+
+                        <h6>3. Test Date/Time:</h6>
+                        <button class="btn btn-sm btn-info mb-2" onclick="setTestData('datetime')">
+                            Tomorrow @ 20:00
+                        </button>
+
+                        <hr>
+                        <button class="btn btn-warning" onclick="checkCurrentData()">
+                            Check Current Database Values
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Expected Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>When you update:</h6>
+                        <ul>
+                            <li>✅ Success notification slides from top</li>
+                            <li>✅ Green pulse effect on card</li>
+                            <li>✅ "Changes saved" message below button</li>
+                            <li>✅ Page refreshes after 2 seconds</li>
+                            <li>✅ New values persist</li>
+                            <li>✅ Button returns to grey</li>
+                        </ul>
+
+                        <h6>For address changes:</h6>
+                        <ul>
+                            <li>✅ Geocoding happens automatically</li>
+                            <li>✅ New coordinates displayed</li>
+                            <li>✅ Homepage map updates</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="results">
+                    <p class="text-muted">Click a test button above...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <a href="dashboard.php" class="btn btn-primary btn-lg">
+                Go to Dashboard to Test
+            </a>
+            <a href="../index.html" target="_blank" class="btn btn-success btn-lg">
+                Check Homepage
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function setTestData(type) {
+            const testData = {
+                name: {
+                    field: 'Event Name',
+                    value: 'Spring Rally 2026 - Updated ' + new Date().toLocaleTimeString()
+                },
+                monona: {
+                    field: 'Event Address',
+                    value: 'Monona Terrace, Madison, WI'
+                },
+                memorial: {
+                    field: 'Event Address',
+                    value: 'Memorial Union, Madison, WI'
+                },
+                university: {
+                    field: 'Event Address',
+                    value: '1 University Ave, Madison, WI'
+                },
+                datetime: {
+                    field: 'Date/Time',
+                    value: 'Tomorrow at 20:00'
+                }
+            };
+
+            const data = testData[type];
+            document.getElementById('results').innerHTML = `
+                <div class="alert alert-info">
+                    <strong>Test Data Set!</strong><br>
+                    Field: ${data.field}<br>
+                    Value: <code>${data.value}</code><br>
+                    <br>
+                    <strong>Instructions:</strong><br>
+                    1. Go to the dashboard<br>
+                    2. Change the ${data.field} to: <code>${data.value}</code><br>
+                    3. Click "Update Event"<br>
+                    4. Watch for success notifications
+                </div>
+            `;
+        }
+
+        async function checkCurrentData() {
+            document.getElementById('results').innerHTML = '<div class="spinner-border"></div> Checking...';
+
+            try {
+                const response = await fetch('test_update_direct.php');
+                const text = await response.text();
+
+                const currentMatch = text.match(/Current name: (.+)/);
+                const addressMatch = text.match(/Current address: (.+)/);
+                const coordsMatch = text.match(/Current coordinates: (.+)/);
+
+                document.getElementById('results').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>Current Database Values:</strong><br>
+                        Name: ${currentMatch ? currentMatch[1] : 'Unknown'}<br>
+                        Address: ${addressMatch ? addressMatch[1] : 'Unknown'}<br>
+                        Coordinates: ${coordsMatch ? coordsMatch[1] : 'Unknown'}
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('results').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

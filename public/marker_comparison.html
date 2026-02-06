@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marker Position Comparison</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Marker Position Test - State Street Location</h2>
+        <div id="info" class="alert alert-info mb-3"></div>
+        <div id="map" style="height: 600px; border: 3px solid red;"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        const STATE_STREET_LAT = 43.0747;
+        const STATE_STREET_LNG = -89.3985;
+
+        // Initialize map centered on State Street
+        map = L.map('map').setView([STATE_STREET_LAT, STATE_STREET_LNG], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Add default Leaflet marker (blue)
+        const defaultMarker = L.marker([STATE_STREET_LAT, STATE_STREET_LNG]).addTo(map);
+        defaultMarker.bindPopup('Default Leaflet Marker<br>Should be at State Street').openPopup();
+
+        // Add custom div icon marker (like the party star) slightly offset
+        const customMarker = L.marker([STATE_STREET_LAT + 0.001, STATE_STREET_LNG], {
+            icon: L.divIcon({
+                html: '<i class="fas fa-star"></i>',
+                iconSize: [48, 48],
+                className: 'custom-marker event-marker',
+                iconAnchor: [24, 24],
+                popupAnchor: [0, -24]
+            })
+        }).addTo(map);
+        customMarker.bindPopup('Custom Star Marker<br>Slightly north of default');
+
+        // Add a circle to show exact State Street location
+        L.circle([STATE_STREET_LAT, STATE_STREET_LNG], {
+            color: 'green',
+            fillColor: '#0f3',
+            fillOpacity: 0.2,
+            radius: 50
+        }).addTo(map).bindPopup('Exact State Street Location');
+
+        // Now fetch and add the actual event marker
+        fetch('/api/events.php?id=1')
+            .then(response => response.json())
+            .then(data => {
+                const info = document.getElementById('info');
+                info.innerHTML = `
+                    Event: ${data.event_name}<br>
+                    Address: ${data.event_address}<br>
+                    Database Lat: ${data.event_lat}<br>
+                    Database Lng: ${data.event_lng}<br>
+                    Expected: ${STATE_STREET_LAT}, ${STATE_STREET_LNG}
+                `;
+
+                if (data.event_lat && data.event_lng) {
+                    // Parse coordinates exactly as the main app does
+                    const lat = parseFloat(data.event_lat);
+                    const lng = parseFloat(data.event_lng);
+
+                    console.log('Parsed coordinates:', lat, lng);
+                    console.log('Types:', typeof lat, typeof lng);
+
+                    // Add the event marker using exact same code
+                    const eventMarker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: '<i class="fas fa-star"></i>',
+                            iconSize: [48, 48],
+                            className: 'custom-marker event-marker',
+                            iconAnchor: [24, 24],
+                            popupAnchor: [0, -24]
+                        })
+                    }).addTo(map);
+
+                    eventMarker.bindPopup(`
+                        Event Marker from Database<br>
+                        Lat: ${lat}<br>
+                        Lng: ${lng}
+                    `);
+
+                    // Add crosshair at exact coordinates
+                    const crosshair = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: '+',
+                            className: '',
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+
+                    // Check if coordinates match
+                    if (Math.abs(lat - STATE_STREET_LAT) > 0.0001 || Math.abs(lng - STATE_STREET_LNG) > 0.0001) {
+                        info.className = 'alert alert-danger mb-3';
+                        info.innerHTML += '<br><strong>⚠️ DATABASE COORDINATES DO NOT MATCH STATE STREET!</strong>';
+                    } else {
+                        info.className = 'alert alert-success mb-3';
+                        info.innerHTML += '<br><strong>✅ Coordinates match State Street location</strong>';
+                    }
+                }
+            })
+            .catch(error => {
+                document.getElementById('info').innerHTML = 'Error: ' + error;
+            });
+    </script>
+</body>
+</html>

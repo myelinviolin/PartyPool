@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force Refresh - Fix Marker Position</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="alert alert-danger">
+            <h3>⚠️ Cache Issue Detected</h3>
+            <p>The marker appears off the map because your browser or Cloudflare is caching the old JavaScript file.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">How to Fix This</h4>
+            </div>
+            <div class="card-body">
+                <h5>Option 1: Force Browser Refresh</h5>
+                <ol>
+                    <li>Go to <a href="/" target="_blank">the main app page</a></li>
+                    <li>Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> (Windows/Linux) or <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> (Mac)</li>
+                    <li>This forces the browser to download fresh files</li>
+                </ol>
+
+                <hr>
+
+                <h5>Option 2: Open in Incognito/Private Mode</h5>
+                <p>Open this link in an incognito/private browser window:</p>
+                <a href="/" target="_blank" class="btn btn-primary">https://partycarpool.clodhost.com/</a>
+
+                <hr>
+
+                <h5>Option 3: Clear Browser Cache</h5>
+                <ul>
+                    <li><strong>Chrome:</strong> Settings → Privacy → Clear browsing data → Cached images and files</li>
+                    <li><strong>Firefox:</strong> Settings → Privacy → Clear Data → Cached Web Content</li>
+                    <li><strong>Safari:</strong> Develop → Empty Caches</li>
+                </ul>
+
+                <hr>
+
+                <h5>Option 4: Use Debug Version</h5>
+                <p>This version bypasses all caching:</p>
+                <a href="/debug_marker.html" target="_blank" class="btn btn-success">Open Debug Version</a>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">What Was Fixed</h5>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>Removed CSS classes that were causing positioning conflicts</li>
+                    <li>Used inline styles for the event marker</li>
+                    <li>Fixed icon anchoring to center properly on coordinates</li>
+                    <li>Changed cache version from v=4 to v=20260205</li>
+                </ul>
+
+                <div class="alert alert-info mt-3">
+                    <strong>Technical Details:</strong><br>
+                    The CSS class <code>.event-marker</code> had <code>!important</code> rules that were overriding the Leaflet positioning.
+                    The marker now uses inline styles to avoid CSS conflicts.
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Live JavaScript Check</h5>
+            </div>
+            <div class="card-body">
+                <p>Current app.js version being loaded:</p>
+                <iframe src="/" style="display:none;" onload="checkVersion(this)"></iframe>
+                <pre id="versionCheck">Checking...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkVersion(iframe) {
+            try {
+                const scripts = iframe.contentDocument.getElementsByTagName('script');
+                for (let script of scripts) {
+                    if (script.src && script.src.includes('app.js')) {
+                        document.getElementById('versionCheck').textContent =
+                            'Script URL: ' + script.src + '\n' +
+                            'Should be: js/app.js?v=20260205\n' +
+                            (script.src.includes('20260205') ? '✅ Correct version' : '❌ Old version - needs cache clear');
+                        break;
+                    }
+                }
+            } catch (e) {
+                document.getElementById('versionCheck').textContent = 'Could not check due to cross-origin restrictions';
+            }
+        }
+    </script>
+</body>
+</html>

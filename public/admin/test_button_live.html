@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Update Event Button Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        .success-notification { animation: slideDown 0.3s ease-out; }
+        .update-success {
+            animation: pulse 0.5s ease;
+            border-color: #28a745 !important;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Live Update Event Button Test</h2>
+
+        <div class="alert alert-warning">
+            <strong>Important:</strong> You must be logged in as admin for this test to work.
+            <a href="login.php" class="btn btn-sm btn-primary ms-3">Login Here</a>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Test Update Event (Same as Dashboard)</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="eventForm">
+                            <input type="hidden" id="eventId" value="1">
+
+                            <div class="mb-3">
+                                <label class="form-label">Event Name</label>
+                                <input type="text" class="form-control" id="eventName"
+                                       value="Test Event - <?php echo date('H:i:s'); ?>">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Event Address</label>
+                                <input type="text" class="form-control" id="eventAddress"
+                                       value="Wisconsin State Capitol, Madison, WI">
+                                <small class="text-muted">Try different addresses to test geocoding</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Event Date</label>
+                                <input type="date" class="form-control" id="eventDate" value="2026-02-08">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Event Time</label>
+                                <input type="time" class="form-control" id="eventTime" value="19:00">
+                            </div>
+
+                            <button type="button" class="btn btn-primary w-100" onclick="updateEvent(this)">
+                                <i class="fas fa-save"></i> Update Event (Test Button)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Test Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="testResults">
+                            <p class="text-muted">Click the Update Event button to see results...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Debug Console</h5>
+            </div>
+            <div class="card-body">
+                <pre id="debugConsole" class="bg-dark text-light p-3" style="height: 300px; overflow-y: auto;">
+Ready...
+</pre>
+            </div>
+        </div>
+
+        <div class="mt-3 text-center">
+            <a href="dashboard.php" class="btn btn-primary">Go to Real Dashboard</a>
+            <button onclick="checkSession()" class="btn btn-warning">Check Session Status</button>
+            <button onclick="testDirectUpdate()" class="btn btn-success">Test Direct Update</button>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const console = document.getElementById('debugConsole');
+            const timestamp = new Date().toLocaleTimeString();
+            console.innerHTML += `[${timestamp}] ${message}\n`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // This is the EXACT SAME function from dashboard.php
+        async function updateEvent(btn) {
+            // Show loading state
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Updating...';
+
+            const eventData = {
+                id: document.getElementById('eventId').value,
+                event_name: document.getElementById('eventName').value,
+                event_address: document.getElementById('eventAddress').value,
+                event_date: document.getElementById('eventDate').value,
+                event_time: document.getElementById('eventTime').value
+            };
+
+            log('Starting update...');
+            log('Data: ' + JSON.stringify(eventData));
+
+            try {
+                const response = await fetch('update_event.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(eventData)
+                });
+
+                log('Response status: ' + response.status);
+                const result = await response.json();
+                log('Response: ' + JSON.stringify(result));
+
+                const resultsDiv = document.getElementById('testResults');
+
+                if (result.success) {
+                    // Add visual feedback to the card
+                    const eventCard = btn.closest('.card');
+                    if (eventCard) {
+                        eventCard.classList.add('update-success');
+                        setTimeout(() => eventCard.classList.remove('update-success'), 1000);
+                    }
+
+                    // Show success message at top of page
+                    const pageAlert = document.createElement('div');
+                    pageAlert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3 success-notification shadow-lg';
+                    pageAlert.style.zIndex = '9999';
+                    pageAlert.style.minWidth = '400px';
+                    pageAlert.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x me-3"></i>
+                            <div>
+                                <strong>Event Updated Successfully!</strong><br>
+                                <small>${eventData.event_name} has been updated.</small>
+                                ${result.lat && result.lng ? `<br><small>Location geocoded: ${eventData.event_address}</small>` : ''}
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(pageAlert);
+
+                    // Also show inline success
+                    const inlineAlert = document.createElement('div');
+                    inlineAlert.className = 'alert alert-success alert-dismissible fade show mt-2';
+                    inlineAlert.innerHTML = `
+                        <i class="fas fa-check"></i> Changes saved successfully!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    btn.parentElement.appendChild(inlineAlert);
+
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h5>✅ SUCCESS!</h5>
+                            <p>Event updated successfully!</p>
+                            <ul>
+                                <li>Name: ${eventData.event_name}</li>
+                                <li>Address: ${eventData.event_address}</li>
+                                ${result.lat ? `<li>Geocoded: ${result.lat}, ${result.lng}</li>` : ''}
+                            </ul>
+                        </div>
+                    `;
+
+                    log('✅ UPDATE SUCCESSFUL!');
+
+                    // Auto-dismiss floating alert after 3 seconds
+                    setTimeout(() => {
+                        pageAlert.classList.remove('show');
+                        setTimeout(() => pageAlert.remove(), 150);
+                    }, 3000);
+
+                } else {
+                    // Show error message
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5>❌ Update Failed</h5>
+                            <p>${result.message || 'Unknown error'}</p>
+                            ${result.message === 'Unauthorized' ? '<p><strong>You need to login first!</strong></p>' : ''}
+                        </div>
+                    `;
+
+                    log('❌ UPDATE FAILED: ' + (result.message || 'Unknown error'));
+
+                    const errorAlert = document.createElement('div');
+                    errorAlert.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                    errorAlert.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i> Error: ${result.message || 'Unknown error'}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    btn.parentElement.appendChild(errorAlert);
+                }
+
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+
+            } catch (error) {
+                log('❌ ERROR: ' + error.message);
+
+                document.getElementById('testResults').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>❌ Connection Error</h5>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+
+                const errorAlert = document.createElement('div');
+                errorAlert.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                errorAlert.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i> Connection error: ${error.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                btn.parentElement.appendChild(errorAlert);
+
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function checkSession() {
+            log('Checking session status...');
+            try {
+                const response = await fetch('diagnose.php');
+                const text = await response.text();
+                if (text.includes('Logged In')) {
+                    log('✅ Session is active - you are logged in');
+                    alert('✅ You are logged in as admin!');
+                } else {
+                    log('❌ Not logged in - please login first');
+                    alert('❌ You are NOT logged in. Please login first.');
+                    window.location.href = 'login.php';
+                }
+            } catch (error) {
+                log('Error checking session: ' + error.message);
+            }
+        }
+
+        async function testDirectUpdate() {
+            log('Testing direct update to database...');
+            const response = await fetch('test_update_comprehensive.php');
+            const text = await response.text();
+            log('Test complete - see results in console');
+            console.log(text);
+            alert('Check browser console (F12) for detailed test results');
+        }
+
+        // Check session on load
+        window.addEventListener('load', () => {
+            log('Page loaded. Checking session...');
+            checkSession();
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

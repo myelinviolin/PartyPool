@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Update Event</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Debug: Update Event Button</h2>
+
+        <div class="alert alert-warning">
+            <strong>Debug Mode:</strong> This page tests the exact same updateEvent function from dashboard.php
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Update Event Form</h5>
+            </div>
+            <div class="card-body">
+                <form id="eventForm" onsubmit="return false;">
+                    <input type="hidden" id="eventId" value="1">
+
+                    <div class="mb-3">
+                        <label class="form-label">Event Name</label>
+                        <input type="text" class="form-control" id="eventName" value="Test Event">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Event Address</label>
+                        <input type="text" class="form-control" id="eventAddress" value="Wisconsin State Capitol, Madison, WI">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Event Date</label>
+                        <input type="date" class="form-control" id="eventDate" value="2026-02-08">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Event Time</label>
+                        <input type="time" class="form-control" id="eventTime" value="19:00">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-warning w-100 mb-2" onclick="testButton()">
+                                <i class="fas fa-bug"></i> Test Button Click
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-primary w-100 mb-2" onclick="updateEvent(this)">
+                                <i class="fas fa-save"></i> Update Event (Real)
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Debug Output</h5>
+            </div>
+            <div class="card-body">
+                <pre id="debugOutput" style="height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px;">
+Waiting for action...
+</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, data = null) {
+            const output = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            let logMessage = `[${timestamp}] ${message}`;
+            if (data) {
+                logMessage += '\n' + JSON.stringify(data, null, 2);
+            }
+            output.textContent += logMessage + '\n\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function testButton() {
+            log('Test button clicked!');
+
+            // Check if form elements exist
+            const elements = ['eventId', 'eventName', 'eventAddress', 'eventDate', 'eventTime'];
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    log(`✅ Found: #${id} = "${element.value}"`);
+                } else {
+                    log(`❌ Missing: #${id}`);
+                }
+            });
+
+            // Check if updateEvent function exists
+            if (typeof updateEvent === 'function') {
+                log('✅ updateEvent function exists');
+            } else {
+                log('❌ updateEvent function NOT found');
+            }
+        }
+
+        async function updateEvent(btn) {
+            log('updateEvent called!');
+
+            // Show loading state
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Updating...';
+
+            const eventData = {
+                id: document.getElementById('eventId').value,
+                event_name: document.getElementById('eventName').value,
+                event_address: document.getElementById('eventAddress').value,
+                event_date: document.getElementById('eventDate').value,
+                event_time: document.getElementById('eventTime').value
+            };
+
+            log('Event data collected:', eventData);
+
+            try {
+                log('Sending request to update_event.php...');
+
+                const response = await fetch('update_event.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(eventData)
+                });
+
+                log(`Response status: ${response.status}`);
+
+                const text = await response.text();
+                log('Raw response:', text);
+
+                let result;
+                try {
+                    result = JSON.parse(text);
+                    log('Parsed JSON:', result);
+                } catch (e) {
+                    log('Failed to parse JSON:', e.message);
+                    result = { success: false, message: 'Invalid JSON response' };
+                }
+
+                if (result.success) {
+                    log('✅ UPDATE SUCCESSFUL!');
+
+                    // Add success alert
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success mt-3';
+                    alert.innerHTML = `
+                        <h5>✅ Success!</h5>
+                        <p>Event updated successfully!</p>
+                        ${result.lat ? `<p>Geocoded to: ${result.lat}, ${result.lng}</p>` : ''}
+                    `;
+                    btn.parentElement.appendChild(alert);
+                } else {
+                    log('❌ UPDATE FAILED:', result.message);
+
+                    // Add error alert
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-danger mt-3';
+                    alert.innerHTML = `
+                        <h5>❌ Failed</h5>
+                        <p>${result.message}</p>
+                    `;
+                    btn.parentElement.appendChild(alert);
+                }
+
+            } catch (error) {
+                log('❌ JavaScript Error:', error.message);
+                log('Stack trace:', error.stack);
+
+                // Add error alert
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-danger mt-3';
+                alert.innerHTML = `
+                    <h5>❌ Error</h5>
+                    <p>${error.message}</p>
+                `;
+                btn.parentElement.appendChild(alert);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Log page load
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Page loaded and ready');
+
+            // Check session on load
+            fetch('diagnose.php')
+                .then(r => r.text())
+                .then(text => {
+                    if (text.includes('✅ Logged In')) {
+                        log('✅ Session is active - you are logged in');
+                    } else {
+                        log('⚠️ Not logged in - Update Event may fail');
+                    }
+                })
+                .catch(e => log('Could not check session:', e.message));
+        });
+    </script>
+</body>
+</html>

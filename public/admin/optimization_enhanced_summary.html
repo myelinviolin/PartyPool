@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Enhanced Optimization Features</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">✅ Enhanced Carpool Optimization Complete!</h1>
+
+        <div class="alert alert-success">
+            <h4>New Features Added:</h4>
+            <ul class="mb-0">
+                <li>✅ <strong>Adjustable Vehicle Count</strong> - Specify exact number of vehicles to use</li>
+                <li>✅ <strong>Driving Time Overhead Display</strong> - Shows extra time vs direct route</li>
+                <li>✅ <strong>Max Drive Time Limit</strong> - Set maximum minutes per driver</li>
+                <li>✅ <strong>Rerun with Different Settings</strong> - Try multiple configurations</li>
+                <li>✅ <strong>Visual Overhead Warnings</strong> - Highlights drivers with >20min overhead</li>
+            </ul>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Optimization Controls</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Target Vehicles Setting:</h6>
+                        <ul>
+                            <li>Leave blank to minimize vehicles</li>
+                            <li>Set a number to use exactly that many</li>
+                            <li>Useful when 50min is too much for one driver</li>
+                            <li>Try different values to balance load</li>
+                        </ul>
+
+                        <h6>Max Drive Time:</h6>
+                        <ul>
+                            <li>Default: 50 minutes</li>
+                            <li>Adjustable from 10-120 minutes</li>
+                            <li>Algorithm respects this limit</li>
+                        </ul>
+
+                        <div class="alert alert-info mt-3">
+                            <strong>Example:</strong> If optimization shows one driver with 50min total,
+                            try setting Target Vehicles to 2 or 3 to distribute the load better.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-clock"></i> Time Overhead Display</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>For Each Driver, Shows:</h6>
+                        <ul>
+                            <li><strong>Direct Time:</strong> Home → Event (if driving alone)</li>
+                            <li><strong>Carpool Time:</strong> Home → Pickups → Event</li>
+                            <li><strong>Overhead:</strong> Extra time due to pickups</li>
+                            <li><strong>Percentage:</strong> How much longer (e.g., 50% longer)</li>
+                        </ul>
+
+                        <h6>Visual Indicators:</h6>
+                        <ul>
+                            <li>🔵 <strong>Blue badge:</strong> Normal overhead (<20 min)</li>
+                            <li>⚠️ <strong>Yellow badge:</strong> High overhead (>20 min)</li>
+                            <li>📍 <strong>Yellow border:</strong> Consider using more vehicles</li>
+                        </ul>
+
+                        <div class="alert alert-warning mt-3">
+                            <strong>Warning System:</strong> Drivers with >20 minutes overhead
+                            get highlighted with a suggestion to use more vehicles.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-sync"></i> How to Use Rerun Feature</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>Run initial optimization</strong> - Leave target vehicles blank to minimize</li>
+                    <li><strong>Check overhead times</strong> - Look for yellow warnings</li>
+                    <li><strong>Adjust settings:</strong>
+                        <ul>
+                            <li>If someone has 50+ minutes, increase target vehicles</li>
+                            <li>If overhead is too high, add 1-2 more vehicles</li>
+                        </ul>
+                    </li>
+                    <li><strong>Click "Try Different Settings"</strong> - Resets the optimization</li>
+                    <li><strong>Run again</strong> with new parameters</li>
+                    <li><strong>Compare results</strong> - Find the best balance</li>
+                </ol>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="alert alert-light">
+                            <h6>Example Scenario 1:</h6>
+                            <strong>Minimize Vehicles</strong><br>
+                            • 10 participants, 3 drivers<br>
+                            • Result: 2 vehicles used<br>
+                            • Driver 1: 45min total (15min overhead)<br>
+                            • Driver 2: 50min total (25min overhead) ⚠️<br>
+                            <em>→ Consider using 3 vehicles instead</em>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-light">
+                            <h6>Example Scenario 2:</h6>
+                            <strong>Target 3 Vehicles</strong><br>
+                            • Same 10 participants<br>
+                            • Result: 3 vehicles used<br>
+                            • Driver 1: 30min total (5min overhead)<br>
+                            • Driver 2: 35min total (10min overhead)<br>
+                            • Driver 3: 25min total (5min overhead)<br>
+                            <em>→ Better distribution!</em>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-code"></i> Technical Details</h5>
+            </div>
+            <div class="card-body">
+                <h6>Algorithm Improvements:</h6>
+                <ul>
+                    <li>Enhanced K-means clustering with target vehicle count</li>
+                    <li>Calculates Haversine distance for all routes</li>
+                    <li>Compares direct vs carpool paths for each driver</li>
+                    <li>Balances load when multiple vehicles specified</li>
+                    <li>Respects maximum drive time constraints</li>
+                </ul>
+
+                <h6>New Data Points:</h6>
+                <ul>
+                    <li><code>direct_distance</code> - Miles if driving alone</li>
+                    <li><code>direct_time</code> - Minutes if driving alone</li>
+                    <li><code>overhead_time</code> - Extra minutes due to pickups</li>
+                    <li><code>overhead_percentage</code> - Percentage increase</li>
+                    <li><code>target_vehicles</code> - User-specified target</li>
+                    <li><code>actual_vehicles</code> - What was actually used</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="dashboard.php" class="btn btn-success btn-lg">
+                <i class="fas fa-tachometer-alt"></i> Try Enhanced Optimization
+            </a>
+            <div class="mt-3">
+                <p class="text-muted">The optimization now gives you full control over vehicle distribution
+                and clearly shows the time cost for each driver!</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

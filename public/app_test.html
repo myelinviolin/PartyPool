@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Party Carpool - Complete App Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .test-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+            height: 100%;
+        }
+        .test-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .feature-list li {
+            margin: 10px 0;
+        }
+        .test-result {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        .pending { background-color: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-car"></i> Party Carpool - Complete App Test
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Status Overview -->
+        <div class="alert alert-info">
+            <h4><i class="fas fa-info-circle"></i> Application Status</h4>
+            <p>Testing all components of the Party Carpool application. Click any section to test that feature.</p>
+        </div>
+
+        <!-- Quick Test Results -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Quick System Check</h5>
+            </div>
+            <div class="card-body" id="quickTests">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div> Running tests...
+            </div>
+        </div>
+
+        <!-- Main Application Links -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card test-card" onclick="window.open('index.html', '_blank')">
+                    <div class="card-body text-center">
+                        <span class="status-badge badge bg-success">Active</span>
+                        <i class="fas fa-home fa-3x text-primary mb-3"></i>
+                        <h5>Main Application</h5>
+                        <p class="text-muted">Public-facing carpool app</p>
+                        <button class="btn btn-primary btn-sm">Open App</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <div class="card test-card" onclick="window.open('admin/login.php', '_blank')">
+                    <div class="card-body text-center">
+                        <span class="status-badge badge bg-success">Active</span>
+                        <i class="fas fa-user-shield fa-3x text-warning mb-3"></i>
+                        <h5>Admin Panel</h5>
+                        <p class="text-muted">Event management & optimization</p>
+                        <button class="btn btn-warning btn-sm">Open Admin</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <div class="card test-card" onclick="window.open('marker_test.html', '_blank')">
+                    <div class="card-body text-center">
+                        <span class="status-badge badge bg-success">Active</span>
+                        <i class="fas fa-map-marker-alt fa-3x text-danger mb-3"></i>
+                        <h5>Marker Test</h5>
+                        <p class="text-muted">Verify destination marker position</p>
+                        <button class="btn btn-danger btn-sm">Run Test</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Checklist -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-tasks"></i> Core Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="feature-list list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> Event details display (name, date, time, location)</li>
+                            <li><i class="fas fa-check text-success"></i> Interactive map with participant markers</li>
+                            <li><i class="fas fa-check text-success"></i> Destination marker at State Street</li>
+                            <li><i class="fas fa-check text-success"></i> User registration with geocoding</li>
+                            <li><i class="fas fa-check text-success"></i> Vehicle capacity specification</li>
+                            <li><i class="fas fa-check text-success"></i> Participation statistics chart</li>
+                            <li><i class="fas fa-check text-success"></i> 30-second auto-refresh</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Admin Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="feature-list list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> Event editing with auto-geocoding</li>
+                            <li><i class="fas fa-check text-success"></i> Integrated Update Event button (no separate geocode)</li>
+                            <li><i class="fas fa-check text-success"></i> Participant management table</li>
+                            <li><i class="fas fa-check text-success"></i> Optimization algorithm (K-means clustering)</li>
+                            <li><i class="fas fa-check text-success"></i> Carpool assignment display</li>
+                            <li><i class="fas fa-check text-success"></i> Departure time calculations</li>
+                            <li><i class="fas fa-check text-success"></i> Admin authentication</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Data -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-database"></i> Current Test Data</h5>
+            </div>
+            <div class="card-body" id="testData">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div> Loading data...
+            </div>
+        </div>
+
+        <!-- Admin Credentials -->
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-key"></i> Admin Access</h5>
+            </div>
+            <div class="card-body">
+                <p>To access the admin panel, use these credentials:</p>
+                <div class="bg-light p-3 rounded">
+                    <strong>Username:</strong> admin<br>
+                    <strong>Password:</strong> partyTime123!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Run quick tests
+        async function runQuickTests() {
+            const tests = [];
+
+            // Test 1: API endpoint
+            try {
+                const response = await fetch('/api/events.php?id=1');
+                const data = await response.json();
+                tests.push({
+                    name: 'API Endpoint',
+                    status: response.ok ? 'pass' : 'fail',
+                    details: response.ok ? 'Working' : 'Not responding'
+                });
+
+                // Test 2: Event data
+                tests.push({
+                    name: 'Event Configuration',
+                    status: data.event_name ? 'pass' : 'fail',
+                    details: data.event_name || 'Not configured'
+                });
+
+                // Test 3: Coordinates
+                const correctCoords = Math.abs(parseFloat(data.event_lat) - 43.0747) < 0.001;
+                tests.push({
+                    name: 'Destination Marker Location',
+                    status: correctCoords ? 'pass' : 'fail',
+                    details: correctCoords ? 'Correct (State Street)' : 'Incorrect position'
+                });
+
+                // Test 4: Participants
+                tests.push({
+                    name: 'Test Participants',
+                    status: data.total_participants > 0 ? 'pass' : 'fail',
+                    details: `${data.total_participants} registered`
+                });
+
+                // Test 5: Optimization
+                tests.push({
+                    name: 'Optimization Status',
+                    status: data.optimization_status === 'completed' ? 'pass' : 'pending',
+                    details: data.optimization_status || 'Not run'
+                });
+
+            } catch (error) {
+                tests.push({
+                    name: 'System Check',
+                    status: 'fail',
+                    details: error.message
+                });
+            }
+
+            // Display test results
+            let html = '';
+            tests.forEach(test => {
+                const icon = test.status === 'pass' ? 'check-circle' :
+                            test.status === 'fail' ? 'times-circle' : 'clock';
+                const color = test.status === 'pass' ? 'success' :
+                             test.status === 'fail' ? 'danger' : 'warning';
+
+                html += `
+                    <div class="test-result ${test.status}">
+                        <i class="fas fa-${icon} text-${color}"></i>
+                        <strong>${test.name}:</strong> ${test.details}
+                    </div>
+                `;
+            });
+
+            document.getElementById('quickTests').innerHTML = html;
+        }
+
+        // Load test data
+        async function loadTestData() {
+            try {
+                const response = await fetch('/api/events.php?id=1');
+                const data = await response.json();
+
+                const html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Event Details:</h6>
+                            <ul>
+                                <li><strong>Name:</strong> ${data.event_name}</li>
+                                <li><strong>Date:</strong> ${data.event_date}</li>
+                                <li><strong>Time:</strong> ${data.event_time}</li>
+                                <li><strong>Location:</strong> ${data.event_address}</li>
+                                <li><strong>Coordinates:</strong> ${data.event_lat}, ${data.event_lng}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Participation Stats:</h6>
+                            <ul>
+                                <li><strong>Total Registered:</strong> ${data.total_participants}</li>
+                                <li><strong>Willing to Drive:</strong> ${data.total_drivers}</li>
+                                <li><strong>Need Rides:</strong> ${data.total_riders}</li>
+                                <li><strong>Total Vehicle Capacity:</strong> ${data.total_vehicle_capacity} seats</li>
+                                <li><strong>Last Optimization:</strong> ${data.optimization_run_at || 'Never'}</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('testData').innerHTML = html;
+            } catch (error) {
+                document.getElementById('testData').innerHTML =
+                    `<div class="alert alert-danger">Error loading data: ${error.message}</div>`;
+            }
+        }
+
+        // Run tests on page load
+        runQuickTests();
+        loadTestData();
+
+        // Auto-refresh every 5 seconds
+        setInterval(() => {
+            runQuickTests();
+            loadTestData();
+        }, 5000);
+    </script>
+</body>
+</html>

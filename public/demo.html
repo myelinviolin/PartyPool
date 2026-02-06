@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Party Carpool - Registration Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .demo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .feature-card {
+            transition: transform 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            text-align: center;
+            border-radius: 50%;
+            line-height: 30px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-header">
+        <div class="container text-center">
+            <h1><i class="fas fa-car"></i> Party Carpool System</h1>
+            <p class="lead mb-0">Smart optimization to minimize vehicles needed</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                        <h5>Everyone Registers</h5>
+                        <p>Participants indicate if they're <strong>willing</strong> to drive</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-magic fa-3x text-success mb-3"></i>
+                        <h5>Smart Optimization</h5>
+                        <p>Algorithm decides who <strong>actually</strong> drives to minimize vehicles</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-route fa-3x text-info mb-3"></i>
+                        <h5>Efficient Routes</h5>
+                        <p>Groups by location for optimal pickup paths</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-clipboard-list"></i> Registration Process</h4>
+            </div>
+            <div class="card-body">
+                <h5 class="mb-3">How the Vehicle Seats Field Works:</h5>
+
+                <div class="mb-3">
+                    <span class="step-number">1</span>
+                    <strong>Select "Yes, I can drive"</strong> - Vehicle information section appears
+                </div>
+
+                <div class="mb-3">
+                    <span class="step-number">2</span>
+                    <strong>Enter total seats in your car</strong> - This is the key field!
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="text-success"><i class="fas fa-check"></i> What We Ask</h6>
+                                <p class="mb-2"><strong>"How many total seats are in your car?"</strong></p>
+                                <ul class="mb-0">
+                                    <li>Include the driver seat</li>
+                                    <li>Typical sedan = 5 seats</li>
+                                    <li>SUV = 7-8 seats</li>
+                                    <li>Minivan = 7-8 seats</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="text-primary"><i class="fas fa-calculator"></i> How It's Used</h6>
+                                <p class="mb-2"><strong>Optimization calculates:</strong></p>
+                                <ul class="mb-0">
+                                    <li>Available passenger spots = Total seats - 1</li>
+                                    <li>Groups participants efficiently</li>
+                                    <li>Minimizes total vehicles needed</li>
+                                    <li>Not all willing drivers will drive!</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-4">
+                    <i class="fas fa-lightbulb"></i> <strong>Example:</strong>
+                    If 10 people register and 5 are willing to drive with vehicles of 7, 5, 4, 4, and 3 seats,
+                    the system might only use the 7-seater and 5-seater (12 total capacity for 10 people),
+                    saving 3 vehicles!
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Quick Links</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="/" class="btn btn-primary">
+                                <i class="fas fa-home"></i> Main Application
+                            </a>
+                            <a href="/#" onclick="showSection('register'); return false;" class="btn btn-success">
+                                <i class="fas fa-user-plus"></i> Register Now
+                            </a>
+                            <a href="/admin/login.php" class="btn btn-warning">
+                                <i class="fas fa-user-shield"></i> Admin Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Current Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <p id="stats">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load current stats
+        fetch('/api/users.php?event_id=1')
+            .then(r => r.json())
+            .then(users => {
+                const willing = users.filter(u => u.willing_to_drive).length;
+                const total = users.length;
+                const totalSeats = users
+                    .filter(u => u.willing_to_drive && u.vehicle_capacity)
+                    .reduce((sum, u) => sum + parseInt(u.vehicle_capacity), 0);
+
+                document.getElementById('stats').innerHTML = `
+                    <strong>Registered:</strong> ${total} participants<br>
+                    <strong>Willing to Drive:</strong> ${willing} people<br>
+                    <strong>Total Vehicle Capacity:</strong> ${totalSeats} seats<br>
+                    <strong>Potential Savings:</strong> ${Math.max(0, willing - 2)} vehicles
+                `;
+            })
+            .catch(e => {
+                document.getElementById('stats').innerHTML = 'Error loading stats';
+            });
+
+        function showSection(section) {
+            window.location.href = '/#';
+            setTimeout(() => {
+                if (window.parent && window.parent.showSection) {
+                    window.parent.showSection(section);
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

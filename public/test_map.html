@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Debug Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Map Debug Test</h2>
+        <div id="debug-info" class="alert alert-info mb-3"></div>
+        <div id="map" style="height: 500px; border: 2px solid red;"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let eventMarker = null;
+        let debugInfo = document.getElementById('debug-info');
+
+        // Initialize map
+        map = L.map('map').setView([43.0731, -89.4012], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        debugInfo.innerHTML = 'Map initialized<br>';
+
+        // Fetch event data
+        fetch('/api/events.php?id=1')
+            .then(response => response.json())
+            .then(data => {
+                debugInfo.innerHTML += `Event data received: ${data.event_name}<br>`;
+                debugInfo.innerHTML += `Lat: ${data.event_lat}, Lng: ${data.event_lng}<br>`;
+
+                if (data.event_lat && data.event_lng) {
+                    // Add event marker
+                    const lat = parseFloat(data.event_lat);
+                    const lng = parseFloat(data.event_lng);
+
+                    debugInfo.innerHTML += `Creating marker at ${lat}, ${lng}<br>`;
+
+                    eventMarker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: '<i class="fas fa-star"></i>',
+                            iconSize: [48, 48],
+                            className: 'custom-marker event-marker',
+                            iconAnchor: [24, 24],
+                            popupAnchor: [0, -24]
+                        })
+                    }).addTo(map);
+
+                    eventMarker.bindPopup(`
+                        <div class="popup-header" style="font-size: 1.2rem; color: #FF8C00;">
+                            <i class="fas fa-star"></i> Party Location!
+                        </div>
+                        <div>${data.event_name}</div>
+                        <div>${data.event_address}</div>
+                    `).openPopup();
+
+                    map.setView([lat, lng], 13);
+                    debugInfo.innerHTML += 'Event marker added to map<br>';
+
+                    // Test if marker is really on the map
+                    setTimeout(() => {
+                        if (map.hasLayer(eventMarker)) {
+                            debugInfo.innerHTML += '<strong style="color: green;">✓ Marker confirmed on map!</strong><br>';
+                        } else {
+                            debugInfo.innerHTML += '<strong style="color: red;">✗ Marker NOT on map!</strong><br>';
+                        }
+                    }, 1000);
+                } else {
+                    debugInfo.innerHTML += '<strong style="color: red;">No coordinates found!</strong><br>';
+                }
+            })
+            .catch(error => {
+                debugInfo.innerHTML += `<strong style="color: red;">Error: ${error}</strong><br>`;
+            });
+    </script>
+</body>
+</html>

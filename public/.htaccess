@@ -1,0 +1,16 @@
+# Disable caching for JavaScript files to ensure updates are visible
+<FilesMatch "\.(js)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+</FilesMatch>
+
+# Enable mod_headers if not already enabled
+<IfModule mod_headers.c>
+    # Force no-cache for app.js specifically
+    <Files "app.js">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </Files>
+</IfModule>

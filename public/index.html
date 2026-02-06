@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Party Carpool Coordinator</title>
+
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-car"></i> Party Carpool
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="showSection('home')">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('register')">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/login.php">
+                            <i class="fas fa-user-shield"></i> Admin
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Event Info Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title"><i class="fas fa-calendar-alt"></i> <span id="eventName">Loading Event...</span></h2>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><i class="fas fa-clock"></i> <strong>Date & Time:</strong> <span id="eventDateTime"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> <span id="eventLocation"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Sections -->
+        <div id="homeSection" class="content-section">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-map"></i> Carpool Map</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="map" style="height: 500px; position: relative;"></div>
+                            <div class="map-legend bg-white p-2 rounded shadow-sm" style="position: absolute; bottom: 20px; left: 20px; z-index: 1000;">
+                                <div class="mb-1 d-flex align-items-center">
+                                    <span style="width: 26px; height: 26px; min-width: 26px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 50%; border: 2px solid #FF8C00; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                        <i class="fas fa-star" style="color: white; font-size: 14px;"></i>
+                                    </span>
+                                    <span class="ms-2">Party Location</span>
+                                </div>
+                                <div class="mb-1 d-flex align-items-center">
+                                    <span style="width: 26px; height: 26px; min-width: 26px; display: inline-flex; align-items: center; justify-content: center; background: white; border-radius: 50%; border: 2px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                        <i class="fas fa-car" style="color: #28a745; font-size: 14px;"></i>
+                                    </span>
+                                    <span class="ms-2">Can Drive</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span style="width: 26px; height: 26px; min-width: 26px; display: inline-flex; align-items: center; justify-content: center; background: white; border-radius: 50%; border: 2px solid #17a2b8; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                        <i class="fas fa-user-friends" style="color: #17a2b8; font-size: 14px;"></i>
+                                    </span>
+                                    <span class="ms-2">Need Ride</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h3><i class="fas fa-users"></i> Participation</h3>
+                        </div>
+                        <div class="card-body">
+                            <div>
+                                <p class="mb-1 small"><strong>Total Registered:</strong> <span class="badge bg-primary" id="totalRegistered">0</span></p>
+                                <p class="mb-1 small"><strong>Willing to Drive:</strong> <span class="badge bg-info" id="driverCount">0</span></p>
+                                <p class="mb-1 small"><strong>Total Vehicle Capacity:</strong> <span class="badge bg-success" id="availableSeats">0</span> seats</p>
+                                <p class="mb-0 small"><strong>Optimization Status:</strong> <span class="badge bg-warning" id="optimizationStatus">Pending</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-info-circle"></i> How It Works</h3>
+                        </div>
+                        <div class="card-body" style="padding-top: 0.75rem;">
+                            <ol class="small mb-0">
+                                <li class="mb-1">Register and indicate if you're willing to drive</li>
+                                <li class="mb-1">If willing, specify your vehicle capacity</li>
+                                <li class="mb-1">Admin runs optimization algorithm</li>
+                                <li class="mb-1">System assigns minimum vehicles needed</li>
+                                <li>Check back for your assignment!</li>
+                            </ol>
+                            <div class="d-grid mt-3">
+                                <button class="btn btn-success" onclick="showSection('register')">
+                                    <i class="fas fa-user-plus"></i> Register Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registration Section -->
+        <div id="registerSection" class="content-section" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3><i class="fas fa-user-plus"></i> Register for Carpool</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle"></i> <strong>How it works:</strong> Tell us if you're willing to drive. Our optimization algorithm will decide who actually drives to minimize total vehicles needed!
+                    </div>
+
+                    <form id="registrationForm">
+                        <h5 class="mb-3">Basic Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" id="email" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone" placeholder="555-0123">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="willingToDrive" class="form-label">Are you willing to drive? <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-lg" id="willingToDrive" required>
+                                        <option value="">Please select...</option>
+                                        <option value="true">✅ Yes, I can drive</option>
+                                        <option value="false">🚶 No, I need a ride</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="mb-3 mt-4">Location</h5>
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Your Address <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="address" placeholder="123 State St, Madison, WI 53703" required>
+                        </div>
+
+                        <!-- Driver-specific fields -->
+                        <div id="driverFields" class="border rounded p-4 bg-light" style="display: none;">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-car"></i> Vehicle Information
+                            </h5>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Important:</strong> You're willing to drive, but the optimization algorithm will decide if you're needed as a driver. Not everyone who volunteers will need to drive!
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="availableSeats" class="form-label fw-bold">
+                                            How many seats are available in your car for passengers outside your household? <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="number" class="form-control form-control-lg" id="availableSeatsInput" min="1" max="12" value="4">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle"></i> Only count seats available for carpool passengers. Don't include seats for your household members traveling with you.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="carMake" class="form-label">Car Make</label>
+                                        <input type="text" class="form-control" id="carMake" placeholder="e.g., Toyota">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="carModel" class="form-label">Car Model</label>
+                                        <input type="text" class="form-control" id="carModel" placeholder="e.g., Camry">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="carColor" class="form-label">Car Color</label>
+                                        <input type="text" class="form-control" id="carColor" placeholder="e.g., Silver">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="driverNotes" class="form-label">Additional Notes</label>
+                                <textarea class="form-control" id="driverNotes" rows="2" placeholder="Any special instructions or preferences..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="fas fa-check-circle"></i> Complete Registration
+                            </button>
+                            <p class="text-muted mt-3 mb-0">
+                                <i class="fas fa-info-circle"></i> After registering, you can view all participants and wait for the admin to run the optimization.
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js?v=20260205g"></script>
+</body>
+</html>

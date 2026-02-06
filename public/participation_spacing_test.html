@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Participation Box Spacing Diagnostic</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .highlight-spacing {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255, 0, 0, 0.1),
+                rgba(255, 0, 0, 0.1) 10px,
+                rgba(255, 0, 0, 0.2) 10px,
+                rgba(255, 0, 0, 0.2) 20px
+            );
+        }
+        .spacing-indicator {
+            position: absolute;
+            background: rgba(255, 0, 0, 0.3);
+            border: 2px dashed red;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Participation Box Spacing Diagnostic</h2>
+        <p>The red striped areas show whitespace. Please tell me which number corresponds to the space you want removed:</p>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Current Version (with labels)</h4>
+                <div class="card mb-3" style="position: relative;">
+                    <div class="card-header" style="position: relative; z-index: 10;">
+                        <h3><i class="fas fa-chart-pie"></i> Participation</h3>
+                    </div>
+
+                    <!-- Space 1: Between header and body -->
+                    <div style="height: 1px; background: red; position: relative;">
+                        <span style="position: absolute; left: 10px; top: -10px; background: white; padding: 2px; color: red; font-weight: bold;">
+                            Space 1: Between header and body (Bootstrap default)
+                        </span>
+                    </div>
+
+                    <div class="card-body" style="padding-top: 0.5rem; padding-bottom: 1rem; position: relative;">
+                        <!-- Space 2: Top padding inside body -->
+                        <div class="highlight-spacing" style="height: 0.5rem; margin-bottom: 2px;">
+                            <span style="background: white; padding: 2px; font-size: 12px;">Space 2: Top padding (0.5rem)</span>
+                        </div>
+
+                        <canvas id="statsChart" style="max-height: 180px; background: #f0f0f0;"></canvas>
+
+                        <!-- Space 3: Between chart and stats -->
+                        <div class="highlight-spacing mt-2" style="height: 20px;">
+                            <span style="background: white; padding: 2px; font-size: 12px;">Space 3: Gap before stats (mt-2)</span>
+                        </div>
+
+                        <div>
+                            <p class="mb-1 small"><strong>Total Registered:</strong> <span class="badge bg-primary">24</span></p>
+
+                            <!-- Space 4: Between stat lines -->
+                            <div class="highlight-spacing" style="height: 10px;">
+                                <span style="background: white; padding: 2px; font-size: 10px;">Space 4: Between lines (mb-1)</span>
+                            </div>
+
+                            <p class="mb-1 small"><strong>Willing to Drive:</strong> <span class="badge bg-info">10</span></p>
+                            <p class="mb-1 small"><strong>Total Vehicle Capacity:</strong> <span class="badge bg-success">53</span> seats</p>
+                            <p class="mb-0 small"><strong>Optimization Status:</strong> <span class="badge bg-warning">Pending</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <h4>Options to Fix</h4>
+                <div class="list-group">
+                    <button onclick="removeSpace(1)" class="list-group-item list-group-item-action">
+                        <strong>Remove Space 1:</strong> Gap between header bar and content area
+                    </button>
+                    <button onclick="removeSpace(2)" class="list-group-item list-group-item-action">
+                        <strong>Remove Space 2:</strong> Top padding inside the body (currently 0.5rem)
+                    </button>
+                    <button onclick="removeSpace(3)" class="list-group-item list-group-item-action">
+                        <strong>Remove Space 3:</strong> Gap between chart and stats text
+                    </button>
+                    <button onclick="removeSpace(4)" class="list-group-item list-group-item-action">
+                        <strong>Remove Space 4:</strong> Gaps between stat lines
+                    </button>
+                    <button onclick="removeSpace(5)" class="list-group-item list-group-item-action">
+                        <strong>Remove All Spaces:</strong> Make everything as tight as possible
+                    </button>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <h5>Which space do you see?</h5>
+                    <p>Please tell me the number of the space you want removed, or describe it in relation to these labeled areas.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Live Participation Box (from actual page)</h5>
+            </div>
+            <div class="card-body">
+                <iframe src="/" style="width: 100%; height: 600px; border: 1px solid #ccc;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Create dummy chart
+        const ctx = document.getElementById('statsChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Drivers', 'Riders'],
+                    datasets: [{
+                        data: [10, 14],
+                        backgroundColor: ['#28a745', '#17a2b8'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: { top: 0, bottom: 0 }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 10 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function removeSpace(num) {
+            let message = '';
+            switch(num) {
+                case 1:
+                    message = 'You want to remove the space between the grey header bar and the white content area';
+                    break;
+                case 2:
+                    message = 'You want to remove the padding at the very top of the white content area (before the chart)';
+                    break;
+                case 3:
+                    message = 'You want to remove the gap between the chart and the stats text';
+                    break;
+                case 4:
+                    message = 'You want to remove the spacing between the stat lines';
+                    break;
+                case 5:
+                    message = 'You want to remove ALL spacing and make everything as compact as possible';
+                    break;
+            }
+            alert('Got it! ' + message + '\n\nPlease tell me this number in your response so I can fix the right spacing.');
+        }
+    </script>
+</body>
+</html>
