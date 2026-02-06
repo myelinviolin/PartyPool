@@ -27,6 +27,11 @@ $users_stmt->bindParam(':event_id', $event_id);
 $users_stmt->execute();
 $users = $users_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Extract drivers from users
+$drivers = array_filter($users, function($user) {
+    return $user['willing_to_drive'] && $user['vehicle_capacity'] > 0;
+});
+
 // Get current assignments
 $assignments_query = "SELECT ca.*, u.name as driver_name, u.vehicle_make, u.vehicle_model
                      FROM carpool_assignments ca
@@ -373,8 +378,14 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             console.log('To test manually, type in console:');
             console.log("document.getElementById('eventName').value = 'Test Name Changed';");
             console.log("checkFormChanged();");
-            // Default to Madison coordinates
-            map = L.map('optimizationMap').setView([43.0731, -89.4012], 12);
+
+            // Initialize map - center on event location or default to Madison
+            console.log("Initializing optimization map");
+            <?php
+            $map_lat = $event['event_lat'] ?: 43.0731;
+            $map_lng = $event['event_lng'] ?: -89.4012;
+            ?>
+            map = L.map('optimizationMap').setView([<?php echo $map_lat; ?>, <?php echo $map_lng; ?>], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
