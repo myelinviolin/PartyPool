@@ -572,6 +572,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 const response = await fetch('optimize_enhanced.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin', // Include cookies/session
                     body: JSON.stringify({
                         event_id: <?php echo $event_id; ?>,
                         target_vehicles: targetVehicles ? parseInt(targetVehicles) : null,
@@ -579,7 +580,22 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     })
                 });
 
-                const result = await response.json();
+                // Check if response is ok before parsing JSON
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const text = await response.text();
+                console.log('Raw response:', text);
+
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    console.error('Response was:', text);
+                    throw new Error('Invalid JSON response from server');
+                }
                 console.log('Optimization result:', result);
 
                 if (result.success) {

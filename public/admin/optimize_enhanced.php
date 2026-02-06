@@ -1,13 +1,24 @@
 <?php
 session_start();
 
+// Prevent any output before JSON
+ob_start();
+
+// Check authorization
 if (!isset($_SESSION['admin_id'])) {
+    ob_clean();
+    header('Content-Type: application/json');
     http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized - Please log in']);
     exit();
 }
 
+// Set JSON header
 header('Content-Type: application/json');
+
+// Suppress any warnings/notices that might break JSON output
+error_reporting(E_ERROR | E_PARSE);
+ini_set('display_errors', 0);
 
 include_once '../config/database.php';
 
@@ -446,17 +457,45 @@ class EnhancedCarpoolOptimizer {
 }
 
 // Handle request
-$database = new Database();
-$db = $database->getConnection();
+try {
+    $database = new Database();
+    $db = $database->getConnection();
 
-$data = json_decode(file_get_contents('php://input'), true);
+    if (!$db) {
+        throw new Exception('Database connection failed');
+    }
 
-$event_id = $data['event_id'] ?? 1;
-$target_vehicles = isset($data['target_vehicles']) ? (int)$data['target_vehicles'] : null;
-$max_drive_time = isset($data['max_drive_time']) ? (int)$data['max_drive_time'] : 50;
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
 
-$optimizer = new EnhancedCarpoolOptimizer($db, $event_id, $target_vehicles, $max_drive_time);
-$result = $optimizer->optimize();
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('Invalid JSON input: ' . json_last_error_msg());
+    }
 
-echo json_encode($result);
+    $event_id = $data['event_id'] ?? 1;
+    $target_vehicles = isset($data['target_vehicles']) ? (int)$data['target_vehicles'] : null;
+    $max_drive_time = isset($data['max_drive_time']) ? (int)$data['max_drive_time'] : 50;
+
+    $optimizer = new EnhancedCarpoolOptimizer($db, $event_id, $target_vehicles, $max_drive_time);
+    $result = $optimizer->optimize();
+
+    // Clean any buffered output
+    ob_clean();
+
+    // Output result
+    echo json_encode($result);
+
+} catch (Exception $e) {
+    // Clean any buffered output
+    ob_clean();
+
+    // Return error as JSON
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error: ' . $e->getMessage()
+    ]);
+}
+
+// End output buffering
+ob_end_flush();
 ?>
