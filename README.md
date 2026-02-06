@@ -1,41 +1,43 @@
-# Party Carpool Coordinator
+# PartyPool - Party Carpool Coordinator
 
 ## Application Overview
-A complete web application for coordinating carpooling for party events. Users can register as drivers or riders, and the system helps match them together.
-
-## Access Information
-
-- **URL**: https://partycarpool.clodhost.com
-- **SSL Certificate**: Self-signed (browser will show warning - proceed anyway)
-
-## Database Credentials
-
-- **Database Name**: partycarpool
-- **Database User**: carpooluser
-- **Database Password**: CarpoolPass2024!
+A complete web application for coordinating carpooling for party events. Users can register as drivers or riders, and the system helps match them together with intelligent optimization.
 
 ## Features Implemented
 
+### Core Features
 1. **User Registration System**
    - Drivers can register with car details and available seats
    - Riders can register and request rides
    - Address geocoding with map pinpoints
 
 2. **Interactive Map**
-   - Shows event location with gold star
+   - Shows event location with gold star marker
    - Green car icons for drivers
    - Blue person icons for riders
    - Click markers to see contact details
 
-3. **Carpool Matching**
-   - Match riders with drivers
-   - Track pickup locations and times
-   - Status management (pending/confirmed/cancelled)
+3. **Admin Dashboard**
+   - Event management and editing
+   - Carpool optimization with K-means clustering
+   - Overhead time calculations (direct vs carpool routes)
+   - Adjustable vehicle count for optimal distribution
+   - Real-time form validation
 
-4. **Real-time Statistics**
-   - Available seats counter
-   - Driver/Rider distribution chart
-   - Confirmed matches tracking
+4. **Carpool Optimization**
+   - Automatic vehicle minimization
+   - Driver route planning with time estimates
+   - Overhead display showing extra driving time
+   - Visual warnings for high overhead (>20 minutes)
+   - Rerun capability with different vehicle counts
+
+## Recent Enhancements
+
+- Map styling unified across homepage and admin dashboard
+- Overhead time calculations for driver route planning
+- Vehicle count adjustment after initial optimization
+- Visual warnings for high driving overhead
+- Improved UI flow: run optimization first, then adjust
 
 ## API Endpoints
 
@@ -46,14 +48,6 @@ A complete web application for coordinating carpooling for party events. Users c
 - `POST /api/carpools.php` - Create carpool match
 - `PUT /api/carpools.php?id=X` - Update carpool status
 
-## Sample Data
-
-The system includes:
-- 1 Event: "Summer Party 2024" scheduled for next week
-- 1 Sample Driver: John Driver with a Toyota Camry (3 seats)
-- 1 Sample Rider: Jane Rider
-- 1 Confirmed carpool match between them
-
 ## Technologies Used
 
 - **Backend**: PHP 8.3 with PDO for database access
@@ -61,43 +55,39 @@ The system includes:
 - **Web Server**: Apache 2.4 with SSL
 - **Frontend**: HTML5, Bootstrap 5, JavaScript
 - **Maps**: Leaflet.js with OpenStreetMap
-- **Charts**: Chart.js for statistics
+- **Geocoding**: OpenStreetMap Nominatim API
+- **Optimization**: K-means clustering algorithm
+
+## Setup Instructions
+
+1. Clone the repository
+2. Copy `public/config/database.php.example` to `public/config/database.php`
+3. Update database credentials in the config file
+4. Import database schema
+5. Configure web server to point to public directory
+6. Navigate to the application URL
 
 ## Directory Structure
 
 ```
-/var/www/partycarpool.clodhost.com/public/
+/public/
 ├── index.html          # Main application page
-├── api/               # Backend API endpoints
+├── admin/              # Admin dashboard
+│   ├── dashboard.php
+│   ├── login.php
+│   └── optimize_enhanced.php
+├── api/                # Backend API endpoints
 │   ├── users.php
 │   ├── events.php
 │   └── carpools.php
-├── config/            # Database configuration
+├── config/             # Database configuration
 │   └── database.php
-├── css/               # Stylesheets
+├── css/                # Stylesheets
 │   └── style.css
-└── js/                # JavaScript files
+└── js/                 # JavaScript files
     └── app.js
 ```
 
-## System Requirements Met
+## License
 
-- Apache configured with SSL (port 443)
-- Cloudflare "Full" SSL mode compatible
-- Firewall configured for HTTPS
-- Real MySQL database (not dummy data)
-- Complete implementation (no placeholders)
-- Interactive map with address pinpoints
-- Contact details management
-- Single-event focused design
-
-## Testing the Application
-
-1. Navigate to https://partycarpool.clodhost.com
-2. Accept the self-signed certificate warning
-3. Register as a driver or rider
-4. View the interactive map
-5. Create carpool matches
-6. Monitor statistics on the dashboard
-
-The application refreshes data every 30 seconds automatically.
+This project is open source and available for educational purposes.
