@@ -571,18 +571,11 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         function updateParticipantCards(optimizationResult) {
-            // First, clear all existing assignment statuses and reset colors
+            // After optimization, ALL cards should be yellow (riders) except assigned drivers (blue)
+            // Step 1: Set ALL cards to yellow (assigned-rider) and clear statuses
             document.querySelectorAll('.participant-card').forEach(card => {
-                card.classList.remove('assigned-driver', 'assigned-rider');
-
-                // Reset to original colors based on capability
-                if (card.dataset.canDrive === 'true') {
-                    card.classList.add('can-drive');
-                    card.classList.remove('need-ride');
-                } else {
-                    card.classList.add('need-ride');
-                    card.classList.remove('can-drive');
-                }
+                card.classList.remove('assigned-driver', 'can-drive', 'need-ride');
+                card.classList.add('assigned-rider'); // Everyone is a rider by default
 
                 const statusDiv = card.querySelector('.assignment-status');
                 if (statusDiv) {
@@ -590,14 +583,15 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             });
 
-            // Mark assigned drivers and their passengers
+            // Step 2: Mark assigned drivers as blue and add badges
             if (optimizationResult.routes) {
+                // First pass: Mark all assigned drivers
                 optimizationResult.routes.forEach(route => {
                     // Find and update driver card
                     const driverCard = document.querySelector(`.participant-card[data-user-name="${route.driver_name}"]`);
                     if (driverCard) {
-                        // Remove old color classes and add assigned-driver
-                        driverCard.classList.remove('can-drive', 'need-ride');
+                        // Change from yellow to blue for assigned drivers
+                        driverCard.classList.remove('assigned-rider');
                         driverCard.classList.add('assigned-driver');
 
                         const statusDiv = driverCard.querySelector('.assignment-status');
@@ -607,16 +601,14 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                             </span>`;
                         }
                     }
+                });
 
-                    // Update passenger cards to show they're assigned to this driver
+                // Second pass: Add "Riding with" badges for passengers
+                optimizationResult.routes.forEach(route => {
                     if (route.passengers) {
                         route.passengers.forEach(passenger => {
                             const passengerCard = document.querySelector(`.participant-card[data-user-name="${passenger.name}"]`);
                             if (passengerCard) {
-                                // Remove old color classes and add assigned-rider
-                                passengerCard.classList.remove('can-drive', 'need-ride');
-                                passengerCard.classList.add('assigned-rider');
-
                                 const statusDiv = passengerCard.querySelector('.assignment-status');
                                 if (statusDiv) {
                                     statusDiv.innerHTML = `<span class="badge bg-secondary">
