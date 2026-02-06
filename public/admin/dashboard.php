@@ -575,8 +575,10 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         function updateParticipantCards(optimizationResult) {
-            // After optimization, ALL cards should be yellow (riders) except assigned drivers (blue)
-            // Step 1: Set ALL cards to yellow (assigned-rider) and clear statuses
+            console.log('Updating participant cards with optimization result:', optimizationResult);
+
+            // After optimization, ALL cards should be orange (riders) except assigned drivers (blue)
+            // Step 1: Set ALL cards to orange (assigned-rider) and clear statuses
             document.querySelectorAll('.participant-card').forEach(card => {
                 card.classList.remove('assigned-driver', 'can-drive', 'need-ride');
                 card.classList.add('assigned-rider'); // Everyone is a rider by default
@@ -590,11 +592,36 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             // Step 2: Mark assigned drivers as blue and add badges
             if (optimizationResult.routes) {
                 // First pass: Mark all assigned drivers
-                optimizationResult.routes.forEach(route => {
-                    // Find and update driver card
-                    const driverCard = document.querySelector(`.participant-card[data-user-name="${route.driver_name}"]`);
+                optimizationResult.routes.forEach((route, index) => {
+                    console.log(`Processing route ${index + 1}, driver: ${route.driver_name}`);
+
+                    // Find driver card - need to handle HTML entities and special characters
+                    let driverCard = null;
+
+                    // Create a temporary element to decode HTML entities
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = route.driver_name;
+                    const decodedDriverName = tempDiv.textContent || tempDiv.innerText || '';
+
+                    // Try to find the card using different matching strategies
+                    document.querySelectorAll('.participant-card').forEach(card => {
+                        const cardName = card.dataset.userName || '';
+
+                        // Check various matching strategies
+                        if (cardName === route.driver_name ||
+                            cardName === decodedDriverName ||
+                            cardName.includes(route.driver_name) ||
+                            route.driver_name.includes(cardName) ||
+                            cardName.includes(decodedDriverName) ||
+                            decodedDriverName.includes(cardName)) {
+                            driverCard = card;
+                            console.log(`Matched driver: "${route.driver_name}" with card: "${cardName}"`);
+                        }
+                    });
+
                     if (driverCard) {
-                        // Change from yellow to blue for assigned drivers
+                        console.log(`Found card for driver: ${route.driver_name}`);
+                        // Change from orange to blue for assigned drivers
                         driverCard.classList.remove('assigned-rider');
                         driverCard.classList.add('assigned-driver');
 
@@ -604,26 +631,71 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="fas fa-check"></i> Assigned Driver
                             </span>`;
                         }
+                    } else {
+                        console.warn(`Could not find card for driver: ${route.driver_name}`);
                     }
                 });
 
                 // Second pass: Add "Riding with" badges for passengers
                 optimizationResult.routes.forEach(route => {
-                    if (route.passengers) {
+                    if (route.passengers && route.passengers.length > 0) {
                         route.passengers.forEach(passenger => {
-                            const passengerCard = document.querySelector(`.participant-card[data-user-name="${passenger.name}"]`);
+                            console.log(`Processing passenger: ${passenger.name}, riding with ${route.driver_name}`);
+
+                            // Find passenger card - need to handle HTML entities and special characters
+                            let passengerCard = null;
+
+                            // Create a temporary element to decode HTML entities
+                            const tempDiv2 = document.createElement('div');
+                            tempDiv2.innerHTML = passenger.name;
+                            const decodedPassengerName = tempDiv2.textContent || tempDiv2.innerText || '';
+
+                            // Try to find the card using different matching strategies
+                            document.querySelectorAll('.participant-card').forEach(card => {
+                                const cardName = card.dataset.userName || '';
+
+                                // Check various matching strategies
+                                if (cardName === passenger.name ||
+                                    cardName === decodedPassengerName ||
+                                    cardName.includes(passenger.name) ||
+                                    passenger.name.includes(cardName) ||
+                                    cardName.includes(decodedPassengerName) ||
+                                    decodedPassengerName.includes(cardName)) {
+                                    passengerCard = card;
+                                    console.log(`Matched passenger: "${passenger.name}" with card: "${cardName}"`);
+                                }
+                            });
+
                             if (passengerCard) {
+                                console.log(`Found card for passenger: ${passenger.name}`);
                                 const statusDiv = passengerCard.querySelector('.assignment-status');
                                 if (statusDiv) {
                                     statusDiv.innerHTML = `<span class="badge bg-secondary">
                                         <i class="fas fa-user-friends"></i> Riding with ${route.driver_name}
                                     </span>`;
                                 }
+                            } else {
+                                console.warn(`Could not find card for passenger: ${passenger.name}`);
                             }
                         });
                     }
                 });
             }
+
+            // Log final status
+            console.log('Card update complete. Checking results:');
+            console.log('Available cards:');
+            document.querySelectorAll('.participant-card').forEach(card => {
+                console.log(`  Card name: "${card.dataset.userName}"`);
+            });
+            console.log('Assignment results:');
+            document.querySelectorAll('.participant-card').forEach(card => {
+                const name = card.dataset.userName;
+                const hasDriverClass = card.classList.contains('assigned-driver');
+                const hasRiderClass = card.classList.contains('assigned-rider');
+                const statusBadge = card.querySelector('.assignment-status')?.innerText || 'No badge';
+                console.log(`  ${name}: Driver=${hasDriverClass}, Rider=${hasRiderClass}, Badge="${statusBadge.trim()}"`);
+            });
         }
 
         async function runOptimization(targetVehicles = null) {
