@@ -676,6 +676,10 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
                             if (passengerCard) {
                                 console.log(`Found card for passenger: ${passenger.name}`);
+                                // Ensure passenger card is orange (in case it was mistakenly changed)
+                                passengerCard.classList.remove('assigned-driver', 'can-drive', 'need-ride');
+                                passengerCard.classList.add('assigned-rider');
+
                                 const statusDiv = passengerCard.querySelector('.assignment-status');
                                 if (statusDiv) {
                                     statusDiv.innerHTML = `<span class="badge bg-secondary">
@@ -702,7 +706,16 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 const hasDriverClass = card.classList.contains('assigned-driver');
                 const hasRiderClass = card.classList.contains('assigned-rider');
                 const statusBadge = card.querySelector('.assignment-status')?.innerText || 'No badge';
-                console.log(`  ${name}: Driver=${hasDriverClass}, Rider=${hasRiderClass}, Badge="${statusBadge.trim()}"`);
+                const cardColor = hasDriverClass ? 'BLUE' : (hasRiderClass ? 'ORANGE' : 'UNKNOWN');
+                console.log(`  ${name}: Color=${cardColor}, Badge="${statusBadge.trim()}"`);
+
+                // Verify color consistency
+                if (statusBadge.includes('Riding with') && !hasRiderClass) {
+                    console.error(`ERROR: ${name} has "Riding with" badge but is not orange!`);
+                }
+                if ((statusBadge.includes('Driving') || statusBadge.includes('Solo')) && !hasDriverClass) {
+                    console.error(`ERROR: ${name} has driving badge but is not blue!`);
+                }
             });
         }
 
