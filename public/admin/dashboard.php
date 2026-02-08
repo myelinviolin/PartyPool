@@ -793,8 +793,19 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         async function loadSavedOptimization() {
             try {
-                const response = await fetch('/api/optimization-results.php?event_id=<?php echo $event_id; ?>');
+                // Add timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                const response = await fetch('/api/optimization-results.php?event_id=<?php echo $event_id; ?>&_=' + timestamp, {
+                    cache: 'no-cache'
+                });
                 const data = await response.json();
+
+                console.log('Loaded saved optimization:', {
+                    exists: data.optimization_exists,
+                    vehicles_needed: data.vehicles_needed,
+                    routes_count: data.routes ? data.routes.length : 0,
+                    created_at: data.created_at
+                });
 
                 if (data.optimization_exists && data.routes && data.routes.length > 0) {
                     // Display the saved optimization results
@@ -875,7 +886,13 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     console.error('Response was:', text);
                     throw new Error('Invalid JSON response from server');
                 }
-                console.log('Optimization result:', result);
+                console.log('Optimization result:', {
+                    success: result.success,
+                    vehicles_needed: result.vehicles_needed,
+                    target_vehicles: result.target_vehicles,
+                    actual_vehicles: result.actual_vehicles,
+                    routes_count: result.routes ? result.routes.length : 0
+                });
 
                 if (result.success) {
                     // Store the optimization results globally
@@ -892,20 +909,16 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     }
 
                     statusMessage += `</div>`;
-
                     statusDiv.innerHTML = statusMessage;
-                    displayEnhancedResults(result);
-                    updateParticipantCards(result);  // Update participant cards
+
+                    // Show temporary message while saving
                     document.getElementById('resultsCard').style.display = 'block';
+                    document.getElementById('optimizationResults').innerHTML = '<div class="text-center"><div class="spinner-border"></div> Saving optimization results...</div>';
 
-                    // Draw routes on map
-                    if (result.routes) {
-                        drawRoutes(result);
-                    }
-
-                    // After successful optimization, wait a moment then reload saved data
-                    // This ensures the database has been updated with the new optimization
+                    // Wait for database save, then load the saved results as the single source of truth
+                    console.log('Optimization successful, waiting for database save...');
                     setTimeout(() => {
+                        console.log('Loading saved optimization from database...');
                         loadSavedOptimization();
                     }, 1500);
                 } else {
@@ -921,12 +934,22 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             if (newTarget && newTarget > 0) {
                 console.log('Rerunning optimization with', newTarget, 'vehicles');
 
-                // Clear previous results
+                // Hide the results card completely first
+                document.getElementById('resultsCard').style.display = 'none';
+
+                // Clear previous map markers
                 markers.forEach(m => map.removeLayer(m));
                 markers = [];
 
-                // Clear the results display while running
-                document.getElementById('optimizationResults').innerHTML = '<div class="text-center"><div class="spinner-border"></div> Running optimization with ' + newTarget + ' vehicles...</div>';
+                // Clear any existing route lines
+                if (window.routeLines) {
+                    window.routeLines.forEach(line => map.removeLayer(line));
+                    window.routeLines = [];
+                }
+
+                // Show status message
+                const statusDiv = document.getElementById('optimizationStatus');
+                statusDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Rerunning optimization with ' + newTarget + ' vehicles...';
 
                 // Run with new target - ensure it's passed as integer
                 runOptimization(parseInt(newTarget));
@@ -1049,6 +1072,12 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
+            // Clear any existing route lines
+            if (window.routeLines) {
+                window.routeLines.forEach(line => map.removeLayer(line));
+            }
+            window.routeLines = [];
+
             // Draw routes for each vehicle
             assignments.routes.forEach(route => {
                 if (route.coordinates && route.coordinates.length > 1) {
@@ -1058,6 +1087,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         opacity: 0.7
                     }).addTo(map);
                     markers.push(polyline);
+                    window.routeLines.push(polyline);
                 }
             });
         }
