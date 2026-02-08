@@ -581,27 +581,30 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         function updateParticipantCards(optimizationResult) {
             console.log('========== UPDATING PARTICIPANT CARDS ==========');
             console.log('Optimization result:', optimizationResult);
+            console.log('Routes count:', optimizationResult.routes ? optimizationResult.routes.length : 0);
 
-            // Create a map to track all assignments
-            const assignmentMap = new Map();
-
-            // After optimization, ALL cards should be orange (riders) except assigned drivers (blue)
-            // Step 1: Set ALL cards to orange (assigned-rider) and clear statuses
+            // Force clear all cards first with no assumptions
             document.querySelectorAll('.participant-card').forEach(card => {
-                card.classList.remove('assigned-driver', 'can-drive', 'need-ride');
-                card.classList.add('assigned-rider'); // Everyone is a rider by default
-
+                card.classList.remove('assigned-driver', 'assigned-rider', 'can-drive', 'need-ride');
                 const statusDiv = card.querySelector('.assignment-status');
                 if (statusDiv) {
                     statusDiv.innerHTML = '';
                 }
+            });
 
-                // Track that this person hasn't been assigned yet
+            // Create a map to track all assignments
+            const assignmentMap = new Map();
+
+            // Build the assignment map from card data
+            document.querySelectorAll('.participant-card').forEach(card => {
                 const userName = card.dataset.userName;
                 if (userName) {
                     assignmentMap.set(userName, { card: card, role: 'unassigned' });
                 }
             });
+
+            // Don't default anyone to rider status - we'll set roles based on actual assignments
+            // This prevents drivers from showing as riders if they're not found
 
             // Helper function to find matching card
             function findParticipantCard(name) {
@@ -661,8 +664,8 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         // Update assignment tracking
                         assignmentMap.get(driverMatch.name).role = 'driver';
 
-                        // Change from orange to blue for assigned drivers
-                        driverMatch.card.classList.remove('assigned-rider');
+                        // Remove all previous assignment classes and add driver class
+                        driverMatch.card.classList.remove('assigned-rider', 'can-drive', 'need-ride');
                         driverMatch.card.classList.add('assigned-driver');
 
                         const statusDiv = driverMatch.card.querySelector('.assignment-status');
@@ -718,6 +721,30 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         });
                     }
                 });
+            }
+
+            // Step 3: Handle unassigned participants
+            // Anyone not assigned as driver or passenger should keep their original status
+            for (const [name, data] of assignmentMap) {
+                if (data.role === 'unassigned') {
+                    const card = data.card;
+                    // Remove any assignment classes
+                    card.classList.remove('assigned-driver', 'assigned-rider');
+
+                    // Restore original status based on willing_to_drive
+                    const canDrive = card.dataset.canDrive === 'true';
+                    if (canDrive) {
+                        card.classList.add('can-drive');
+                    } else {
+                        card.classList.add('need-ride');
+                    }
+
+                    // Clear any status badge
+                    const statusDiv = card.querySelector('.assignment-status');
+                    if (statusDiv) {
+                        statusDiv.innerHTML = '';
+                    }
+                }
             }
 
             // Final verification and summary
@@ -929,12 +956,21 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     document.getElementById('resultsCard').style.display = 'block';
                     document.getElementById('optimizationResults').innerHTML = '<div class="text-center"><div class="spinner-border"></div> Saving optimization results...</div>';
 
+                    // Clear participant cards immediately to ensure clean state
+                    document.querySelectorAll('.participant-card').forEach(card => {
+                        card.classList.remove('assigned-driver', 'assigned-rider', 'can-drive', 'need-ride');
+                        const statusDiv = card.querySelector('.assignment-status');
+                        if (statusDiv) {
+                            statusDiv.innerHTML = '<span class="badge bg-warning"><i class="fas fa-spinner fa-spin"></i> Updating...</span>';
+                        }
+                    });
+
                     // Wait for database save, then load the saved results as the single source of truth
                     console.log('Optimization successful, waiting for database save...');
                     setTimeout(() => {
                         console.log('Loading saved optimization from database...');
                         loadSavedOptimization();
-                    }, 1500);
+                    }, 2000); // Increased delay to ensure database is updated
                 } else {
                     statusDiv.innerHTML = '<div class="alert alert-danger mb-0 mt-2">Error: ' + result.message + '</div>';
                 }
@@ -959,6 +995,15 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 // Hide the results card completely first
                 document.getElementById('resultsCard').style.display = 'none';
+
+                // Clear participant cards to show updating status
+                document.querySelectorAll('.participant-card').forEach(card => {
+                    card.classList.remove('assigned-driver', 'assigned-rider', 'can-drive', 'need-ride');
+                    const statusDiv = card.querySelector('.assignment-status');
+                    if (statusDiv) {
+                        statusDiv.innerHTML = '<span class="badge bg-warning"><i class="fas fa-spinner fa-spin"></i> Re-optimizing...</span>';
+                    }
+                });
 
                 // Clear previous map markers
                 markers.forEach(m => map.removeLayer(m));
