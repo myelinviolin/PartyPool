@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Event Marker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        #map { height: 400px; margin: 20px; }
+        .info { margin: 20px; padding: 20px; background: #f0f0f0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h2>Event Marker Test</h2>
+        <p>This page tests if the event marker is working correctly.</p>
+        <div id="status">Loading event data...</div>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([43.0731, -89.4012], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Fetch event data
+        fetch('/api/events.php')
+            .then(response => response.json())
+            .then(data => {
+                const status = document.getElementById('status');
+
+                if (data.event_lat && data.event_lng) {
+                    status.innerHTML = `
+                        <strong>Event Data Found:</strong><br>
+                        Name: ${data.event_name}<br>
+                        Address: ${data.event_address}<br>
+                        Coordinates: ${data.event_lat}, ${data.event_lng}
+                    `;
+
+                    // Create and add event marker
+                    const eventIcon = L.divIcon({
+                        html: '<div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 50%; border: 3px solid #FF8C00; box-shadow: 0 3px 10px rgba(255, 215, 0, 0.3);"><i class="fas fa-star" style="color: white; font-size: 24px;"></i></div>',
+                        iconSize: [48, 48],
+                        iconAnchor: [24, 24],
+                        popupAnchor: [0, -24],
+                        className: ''
+                    });
+
+                    const marker = L.marker([parseFloat(data.event_lat), parseFloat(data.event_lng)], {
+                        icon: eventIcon
+                    }).addTo(map);
+
+                    marker.bindPopup(`
+                        <strong>${data.event_name}</strong><br>
+                        ${data.event_address}<br>
+                        ${data.event_date} at ${data.event_time}
+                    `);
+
+                    // Center map on event
+                    map.setView([parseFloat(data.event_lat), parseFloat(data.event_lng)], 14);
+
+                    status.innerHTML += '<br><br><strong style="color: green;">✓ Event marker added to map!</strong>';
+                } else {
+                    status.innerHTML = '<strong style="color: red;">No event coordinates found in database!</strong>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = `<strong style="color: red;">Error: ${error.message}</strong>`;
+            });
+    </script>
+</body>
+</html>
