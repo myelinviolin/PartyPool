@@ -379,9 +379,6 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             // Initially check button state
             checkFormChanged();
 
-            // Load saved optimization results if they exist
-            loadSavedOptimization();
-
             // Debug: Check if functions are accessible
             console.log('Functions available:');
             console.log('- checkFormChanged:', typeof window.checkFormChanged);
@@ -455,6 +452,9 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 const group = new L.featureGroup(allMarkers);
                 map.fitBounds(group.getBounds().pad(0.1));
             }
+
+            // Load saved optimization results if they exist (after map is ready)
+            loadSavedOptimization();
         });
 
         // UPDATE EVENT FUNCTION - Global scope for onclick handler
@@ -806,6 +806,9 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         routes: data.routes
                     });
 
+                    // Show the results card
+                    document.getElementById('resultsCard').style.display = 'block';
+
                     // Update status
                     const statusDiv = document.getElementById('optimizationStatus');
                     if (statusDiv) {
@@ -813,9 +816,22 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         statusDiv.innerHTML = `<div class="text-success"><i class="fas fa-check-circle"></i> Last optimized: ${lastRun}</div>`;
                     }
 
-                    // Update map with saved routes
+                    // Update participant cards with saved data
+                    updateParticipantCards({
+                        success: true,
+                        total_participants: data.total_participants,
+                        vehicles_needed: data.vehicles_needed,
+                        vehicles_saved: data.vehicles_saved,
+                        routes: data.routes
+                    });
+
+                    // Draw routes on map
                     if (data.routes && map) {
-                        updateOptimizationMap(data.routes);
+                        drawRoutes({
+                            routes: data.routes,
+                            vehicles_needed: data.vehicles_needed,
+                            vehicles_saved: data.vehicles_saved
+                        });
                     }
                 }
             } catch (error) {
