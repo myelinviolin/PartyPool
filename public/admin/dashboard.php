@@ -302,6 +302,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/map-utils.js"></script>
     <script>
         // Global error handler for debugging
         window.onerror = function(msg, url, line, col, error) {
@@ -403,60 +404,46 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
             let allMarkers = [];
 
-            // Add event location marker with homepage gold star style
+            // Add event location marker using shared function
             <?php if ($event['event_lat'] && $event['event_lng']): ?>
-            const eventMarker = L.marker([<?php echo $event['event_lat']; ?>, <?php echo $event['event_lng']; ?>], {
-                icon: L.divIcon({
-                    html: '<div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 50%; border: 3px solid #FF8C00; box-shadow: 0 3px 10px rgba(255, 215, 0, 0.3);"><i class="fas fa-star" style="color: white; font-size: 24px;"></i></div>',
-                    iconSize: [48, 48],
-                    iconAnchor: [24, 24],
-                    popupAnchor: [0, -24],
-                    className: ''  // No CSS classes to avoid conflicts
-                })
-            }).addTo(map).bindPopup(`
-                <div class="popup-header" style="color: #FF8C00;">
-                    <i class="fas fa-star"></i> Event Location
-                </div>
-                <div class="popup-info"><i class="fas fa-map-marker-alt"></i> <?php echo addslashes($event['event_name']); ?></div>
-                <div class="popup-info"><i class="fas fa-location-arrow"></i> <?php echo addslashes($event['event_address']); ?></div>
-                <div class="popup-info"><i class="fas fa-calendar"></i> <?php echo date('M j, Y', strtotime($event['event_date'])); ?></div>
-                <div class="popup-info"><i class="fas fa-clock"></i> <?php echo date('g:i A', strtotime($event['event_time'])); ?></div>
-            `);
-            allMarkers.push(eventMarker);
+            const eventDateTime = '<?php echo date('M j, Y \\a\\t g:i A', strtotime($event['event_date'] . ' ' . $event['event_time'])); ?>';
+            const eventMarker = createEventMarker(
+                <?php echo $event['event_lat']; ?>,
+                <?php echo $event['event_lng']; ?>,
+                '<?php echo addslashes($event['event_name']); ?>',
+                '<?php echo addslashes($event['event_address']); ?>',
+                eventDateTime
+            );
+            if (eventMarker) {
+                eventMarker.addTo(map);
+                allMarkers.push(eventMarker);
+            }
             <?php endif; ?>
 
-            // Add user markers with homepage styling
+            // Add user markers using shared functions
             <?php foreach ($users as $user): ?>
                 <?php if ($user['lat'] && $user['lng']): ?>
-                allMarkers.push(
-                    L.marker([<?php echo $user['lat']; ?>, <?php echo $user['lng']; ?>], {
-                        icon: L.divIcon({
-                            html: '<div style="width: 36px; height: 36px; background: white; border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; border: 3px solid <?php echo $user['willing_to_drive'] ? '#28a745' : '#17a2b8'; ?>;"><i class="fas fa-<?php echo $user['willing_to_drive'] ? 'car' : 'user-friends'; ?>" style="color: <?php echo $user['willing_to_drive'] ? '#28a745' : '#17a2b8'; ?>; font-size: 18px;"></i></div>',
-                            iconSize: [36, 36],
-                            iconAnchor: [18, 18],
-                            popupAnchor: [0, -18],
-                            className: 'custom-marker <?php echo $user['willing_to_drive'] ? 'driver-marker' : 'rider-marker'; ?>'
-                        })
-                    }).addTo(map).bindPopup(`
-                        <div class="popup-header" style="color: <?php echo $user['willing_to_drive'] ? '#28a745' : '#17a2b8'; ?>;">
-                            <i class="fas fa-<?php echo $user['willing_to_drive'] ? 'car' : 'user-friends'; ?>"></i> <?php echo addslashes($user['name']); ?>
-                        </div>
-                        <?php if ($user['willing_to_drive']): ?>
-                            <div class="badge bg-success mb-2">Willing to Drive</div>
-                            <div class="popup-info"><i class="fas fa-chair"></i> <strong><?php echo $user['vehicle_capacity'] ?: 4; ?> seats available</strong></div>
-                            <?php if ($user['vehicle_make']): ?>
-                                <div class="popup-info"><i class="fas fa-car-side"></i> <?php echo htmlspecialchars($user['vehicle_make'] . ' ' . ($user['vehicle_model'] ?: '')); ?></div>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <div class="badge bg-info mb-2">Needs a Ride</div>
-                        <?php endif; ?>
-                        <div class="popup-info"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($user['email']); ?></div>
-                        <?php if ($user['phone']): ?>
-                            <div class="popup-info"><i class="fas fa-phone"></i> <?php echo htmlspecialchars($user['phone']); ?></div>
-                        <?php endif; ?>
-                        <div class="popup-info"><i class="fas fa-home"></i> <?php echo htmlspecialchars($user['address']); ?></div>
-                    `)
-                );
+                <?php if ($user['willing_to_drive']): ?>
+                    const marker_<?php echo $user['id']; ?> = createDriverMarker(
+                        <?php echo $user['lat']; ?>,
+                        <?php echo $user['lng']; ?>,
+                        '<?php echo addslashes($user['name']); ?>',
+                        '<?php echo addslashes($user['address']); ?>',
+                        <?php echo $user['vehicle_make'] ? "'" . addslashes($user['vehicle_make'] . ' ' . ($user['vehicle_model'] ?: '')) . "'" : 'null'; ?>,
+                        <?php echo $user['vehicle_capacity'] ?: 4; ?>
+                    );
+                <?php else: ?>
+                    const marker_<?php echo $user['id']; ?> = createRiderMarker(
+                        <?php echo $user['lat']; ?>,
+                        <?php echo $user['lng']; ?>,
+                        '<?php echo addslashes($user['name']); ?>',
+                        '<?php echo addslashes($user['address']); ?>'
+                    );
+                <?php endif; ?>
+                if (marker_<?php echo $user['id']; ?>) {
+                    marker_<?php echo $user['id']; ?>.addTo(map);
+                    allMarkers.push(marker_<?php echo $user['id']; ?>);
+                }
                 <?php endif; ?>
             <?php endforeach; ?>
 

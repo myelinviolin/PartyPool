@@ -30,45 +30,6 @@ function initMap() {
     console.log('Map initialized');
 }
 
-// Create party location marker
-function createEventMarker(lat, lng, eventName, eventAddress, eventDateTime) {
-    // Ensure coordinates are numbers
-    lat = parseFloat(lat);
-    lng = parseFloat(lng);
-
-    console.log('Creating event marker at:', lat, lng);
-
-    // Validate coordinates are reasonable for Madison area
-    if (isNaN(lat) || isNaN(lng) || lat < 42 || lat > 44 || lng < -91 || lng > -88) {
-        console.error('Invalid coordinates:', lat, lng);
-        return null;
-    }
-
-    // Create event marker icon with inline styles to avoid CSS conflicts
-    const starIcon = L.divIcon({
-        html: '<div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 50%; border: 3px solid #FF8C00; box-shadow: 0 3px 10px rgba(255, 215, 0, 0.3);"><i class="fas fa-star" style="color: white; font-size: 24px;"></i></div>',
-        iconSize: [48, 48],
-        iconAnchor: [24, 24],
-        popupAnchor: [0, -24],
-        className: ''  // No CSS classes to avoid conflicts
-    });
-
-    const marker = L.marker([lat, lng], { icon: starIcon });
-
-    marker.bindPopup(`
-        <div style="text-align: center;">
-            <strong style="color: #FF8C00; font-size: 16px;">🎉 Party Location!</strong><br>
-            <div style="margin-top: 8px;">
-                <strong>${eventName}</strong><br>
-                ${eventAddress}<br>
-                ${eventDateTime}
-            </div>
-        </div>
-    `);
-
-    return marker;
-}
-
 // Load event data
 async function loadEventData() {
     try {
