@@ -183,11 +183,11 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                        value="<?php echo htmlspecialchars($event['event_address']); ?>"
                                        oninput="checkFormChanged()"
                                        onchange="checkFormChanged()">
-                                <small class="text-muted d-block mt-1">
+                                <small class="text-muted d-block mt-1" id="addressStatus">
                                     <?php if ($event['event_lat'] && $event['event_lng']): ?>
-                                        <i class="fas fa-check-circle text-success"></i> Location coordinates: <?php echo number_format($event['event_lat'], 6); ?>, <?php echo number_format($event['event_lng'], 6); ?>
+                                        <i class="fas fa-check-circle text-success"></i> Location verified
                                     <?php else: ?>
-                                        <i class="fas fa-exclamation-triangle text-warning"></i> Location will be geocoded when you save
+                                        <i class="fas fa-exclamation-triangle text-warning"></i> Location will be verified on save
                                     <?php endif; ?>
                                 </small>
                             </div>
@@ -313,6 +313,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         var map;
         var markers = [];
         var originalEventData = {};
+        var currentOptimizationResults = null; // Store optimization results for itinerary
 
         // Verify script is loading
         console.log('Dashboard script loading...');
@@ -496,6 +497,19 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 console.log('Update result:', result);
 
                 if (result.success) {
+                    // Update the address field with the formatted address
+                    if (result.formatted_address) {
+                        document.getElementById('eventAddress').value = result.formatted_address;
+                        // Update the original data so the form doesn't appear changed
+                        originalEventData.event_address = result.formatted_address;
+                    }
+
+                    // Update the address status
+                    const addressStatus = document.getElementById('addressStatus');
+                    if (addressStatus && result.lat && result.lng) {
+                        addressStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Location verified';
+                    }
+
                     // Add visual feedback to the card
                     const eventCard = btn.closest('.card');
                     if (eventCard) {
@@ -514,7 +528,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div>
                                 <strong>Event Updated Successfully!</strong><br>
                                 <small>${eventData.event_name} has been updated.</small>
-                                ${result.lat && result.lng ? `<br><small>Location geocoded: ${eventData.event_address}</small>` : ''}
+                                ${result.formatted_address ? `<br><small>Location: ${result.formatted_address}</small>` : ''}
                             </div>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -822,6 +836,9 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 console.log('Optimization result:', result);
 
                 if (result.success) {
+                    // Store the optimization results globally
+                    currentOptimizationResults = result;
+
                     let statusMessage = `<div class="alert alert-success mb-0 mt-2">
                         <i class="fas fa-check"></i> Optimization complete!
                         Using ${result.vehicles_needed} vehicles`;
@@ -833,12 +850,6 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     }
 
                     statusMessage += `</div>`;
-
-                    if (result.overhead_optimized && result.max_overhead <= 20) {
-                        statusMessage += `<div class="alert alert-info mb-0 mt-2">
-                            <i class="fas fa-info-circle"></i> All drivers have overhead under 20 minutes!
-                        </div>`;
-                    }
 
                     statusDiv.innerHTML = statusMessage;
                     displayEnhancedResults(result);
@@ -1005,16 +1016,32 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         async function saveAssignments() {
             try {
-                const response = await fetch('save_assignments.php', {
+                // First, save the assignments
+                const saveResponse = await fetch('save_assignments.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event_id: <?php echo $event_id; ?> })
+                    body: JSON.stringify({
+                        event_id: <?php echo $event_id; ?>,
+                        routes: currentOptimizationResults ? currentOptimizationResults.routes : null
+                    })
                 });
 
-                const result = await response.json();
-                if (result.success) {
-                    alert('Assignments saved successfully! Users have been notified.');
-                    location.reload();
+                const saveResult = await saveResponse.json();
+                if (saveResult.success) {
+                    // Download the itinerary file
+                    const downloadUrl = `generate_itinerary.php?event_id=<?php echo $event_id; ?>`;
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = `carpool_itinerary_${new Date().toISOString().split('T')[0]}.txt`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // Show success message after a short delay to allow download to start
+                    setTimeout(() => {
+                        alert('Assignments saved successfully! The itinerary has been downloaded.');
+                        location.reload();
+                    }, 500);
                 }
             } catch (error) {
                 alert('Error saving assignments: ' + error.message);

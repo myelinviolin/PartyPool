@@ -200,6 +200,64 @@ class EnhancedCarpoolOptimizer {
         // Assign drivers to clusters
         $assignments = $this->assignDriversWithOverhead($clusters);
 
+        // Handle any unassigned participants
+        $assignments = $this->ensureAllParticipantsAssigned($assignments);
+
+        // Verify all participants are assigned exactly once
+        $all_assigned = [];
+        $unassigned = [];
+
+        // Track all assigned people
+        foreach ($assignments as $assignment) {
+            // Add driver
+            $all_assigned[] = $assignment['driver_id'];
+
+            // Add passengers
+            if (isset($assignment['passengers'])) {
+                foreach ($assignment['passengers'] as $passenger) {
+                    $all_assigned[] = $passenger['id'];
+                }
+            }
+        }
+
+        // Check for unassigned participants
+        foreach ($this->participants as $participant) {
+            if (!in_array($participant['id'], $all_assigned)) {
+                $unassigned[] = $participant;
+            }
+        }
+
+        // Check for duplicate assignments
+        $assignment_counts = array_count_values($all_assigned);
+        $duplicates = array_filter($assignment_counts, function($count) {
+            return $count > 1;
+        });
+
+        // If there are unassigned people or duplicates, return error
+        if (count($unassigned) > 0 || count($duplicates) > 0) {
+            $error_msg = '';
+
+            if (count($duplicates) > 0) {
+                $error_msg .= 'Some participants assigned multiple times. ';
+            }
+
+            if (count($unassigned) > 0) {
+                $error_msg .= count($unassigned) . ' participants not assigned. ';
+                // Try to provide reason
+                if ($actual_vehicles < $num_clusters) {
+                    $error_msg .= 'Not enough drivers available. ';
+                }
+            }
+
+            return [
+                'success' => false,
+                'message' => $error_msg,
+                'unassigned' => $unassigned,
+                'duplicates' => $duplicates,
+                'routes' => $assignments
+            ];
+        }
+
         // Calculate statistics
         $total_participants = count($this->participants);
         $vehicles_needed = count($assignments);
@@ -215,7 +273,9 @@ class EnhancedCarpoolOptimizer {
             'actual_vehicles' => $actual_vehicles,
             'max_drive_time' => $this->max_drive_time,
             'routes' => $assignments,
-            'assignments' => $assignments
+            'assignments' => $assignments,
+            'assigned_count' => count($all_assigned),
+            'unique_assigned' => count(array_unique($all_assigned))
         ];
     }
 
@@ -288,21 +348,24 @@ class EnhancedCarpoolOptimizer {
 
     private function assignDriversWithOverhead($clusters) {
         $assignments = [];
-        $used_drivers = [];
-        $assigned_passengers = [];
+        $assigned_participants = []; // Track ALL assigned participants (drivers AND passengers)
 
         // Sort drivers by capacity (largest first)
         usort($this->drivers, function($a, $b) {
             return $b['vehicle_capacity'] - $a['vehicle_capacity'];
         });
 
-        foreach ($clusters as $cluster) {
+        // FIRST PASS: Select best driver for each cluster
+        $cluster_drivers = [];
+        $used_driver_ids = [];
+
+        foreach ($clusters as $cluster_index => $cluster) {
             // Find best driver for this cluster
             $best_driver = null;
             $best_score = PHP_FLOAT_MAX;
 
             foreach ($this->drivers as $driver) {
-                if (in_array($driver['id'], $used_drivers)) {
+                if (in_array($driver['id'], $used_driver_ids)) {
                     continue;
                 }
 
@@ -325,92 +388,105 @@ class EnhancedCarpoolOptimizer {
             }
 
             if ($best_driver) {
-                $used_drivers[] = $best_driver['id'];
+                $cluster_drivers[$cluster_index] = $best_driver;
+                $used_driver_ids[] = $best_driver['id'];
+                $assigned_participants[] = $best_driver['id']; // Mark driver as assigned
+            }
+        }
 
-                // Calculate direct drive time for driver (home to event)
-                $direct_distance = 0;
-                $direct_time = 0;
-                if ($best_driver['lat'] && $best_driver['lng']) {
-                    $direct_distance = $this->calculateDistance(
-                        $best_driver['lat'],
-                        $best_driver['lng'],
-                        $this->event['event_lat'],
-                        $this->event['event_lng']
-                    );
-                    $direct_time = $this->calculateTravelTime($direct_distance);
+        // SECOND PASS: Assign passengers and create routes
+        foreach ($clusters as $cluster_index => $cluster) {
+            if (!isset($cluster_drivers[$cluster_index])) {
+                continue; // No driver available for this cluster
+            }
+
+            $best_driver = $cluster_drivers[$cluster_index];
+
+            // Calculate direct drive time for driver (home to event)
+            $direct_distance = 0;
+            $direct_time = 0;
+            if ($best_driver['lat'] && $best_driver['lng']) {
+                $direct_distance = $this->calculateDistance(
+                    $best_driver['lat'],
+                    $best_driver['lng'],
+                    $this->event['event_lat'],
+                    $this->event['event_lng']
+                );
+                $direct_time = $this->calculateTravelTime($direct_distance);
+            }
+
+            // Create assignment with route
+            $passengers = [];
+            $route_distance = 0;
+            $coordinates = [];
+
+            // Add driver's starting location
+            if ($best_driver['lat'] && $best_driver['lng']) {
+                $coordinates[] = [(float)$best_driver['lat'], (float)$best_driver['lng']];
+            }
+
+            // Add passengers
+            foreach ($cluster as $participant) {
+                // Skip if this participant is already assigned (as driver or passenger)
+                if (in_array($participant['id'], $assigned_participants)) {
+                    continue;
                 }
 
-                // Create assignment with route
-                $passengers = [];
-                $route_distance = 0;
-                $coordinates = [];
-
-                // Add driver's starting location
-                if ($best_driver['lat'] && $best_driver['lng']) {
-                    $coordinates[] = [(float)$best_driver['lat'], (float)$best_driver['lng']];
+                // Skip if vehicle is full
+                if (count($passengers) >= $best_driver['vehicle_capacity']) {
+                    break;
                 }
 
-                // Add passengers
-                foreach ($cluster as $participant) {
-                    if ($participant['id'] === $best_driver['id']) {
-                        continue;
-                    }
+                // Add as passenger
+                $passengers[] = [
+                    'id' => $participant['id'],
+                    'name' => $participant['name'],
+                    'address' => $participant['address'],
+                    'lat' => $participant['lat'],
+                    'lng' => $participant['lng']
+                ];
+                $assigned_participants[] = $participant['id']; // Track as assigned
 
-                    if (count($passengers) >= $best_driver['vehicle_capacity']) {
-                        break;
-                    }
-
-                    if (!in_array($participant['id'], $assigned_passengers)) {
-                        $passengers[] = [
-                            'id' => $participant['id'],
-                            'name' => $participant['name'],
-                            'address' => $participant['address'],
-                            'lat' => $participant['lat'],
-                            'lng' => $participant['lng']
-                        ];
-                        $assigned_passengers[] = $participant['id'];
-
-                        if ($participant['lat'] && $participant['lng']) {
-                            $coordinates[] = [(float)$participant['lat'], (float)$participant['lng']];
-                        }
-                    }
+                if ($participant['lat'] && $participant['lng']) {
+                    $coordinates[] = [(float)$participant['lat'], (float)$participant['lng']];
                 }
+            }
 
-                // Add event location as final destination
-                if ($this->event['event_lat'] && $this->event['event_lng']) {
-                    $coordinates[] = [(float)$this->event['event_lat'], (float)$this->event['event_lng']];
+            // Add event location as final destination
+            if ($this->event['event_lat'] && $this->event['event_lng']) {
+                $coordinates[] = [(float)$this->event['event_lat'], (float)$this->event['event_lng']];
+            }
+
+            // Calculate total route distance and time
+            $cumulative_time = 0;
+            for ($i = 0; $i < count($coordinates) - 1; $i++) {
+                $segment_distance = $this->calculateDistance(
+                    $coordinates[$i][0],
+                    $coordinates[$i][1],
+                    $coordinates[$i + 1][0],
+                    $coordinates[$i + 1][1]
+                );
+                $route_distance += $segment_distance;
+
+                $segment_time = $this->calculateTravelTime($segment_distance);
+                $cumulative_time += $segment_time;
+
+                // Add 3 minutes for pickup time at each stop (except last which is event)
+                if ($i < count($passengers)) {
+                    $cumulative_time += 3;
                 }
+            }
 
-                // Calculate total route distance and time
-                $cumulative_time = 0;
-                for ($i = 0; $i < count($coordinates) - 1; $i++) {
-                    $segment_distance = $this->calculateDistance(
-                        $coordinates[$i][0],
-                        $coordinates[$i][1],
-                        $coordinates[$i + 1][0],
-                        $coordinates[$i + 1][1]
-                    );
-                    $route_distance += $segment_distance;
+            // Calculate departure time
+            $departure_time = $this->calculateDepartureTime($cumulative_time);
 
-                    $segment_time = $this->calculateTravelTime($segment_distance);
-                    $cumulative_time += $segment_time;
+            // Check if driver has passengers
+            if (count($passengers) > 0) {
+                // Calculate overhead (extra time due to carpooling)
+                $overhead_time = $cumulative_time - $direct_time;
+                $overhead_percentage = $direct_time > 0 ? round(($overhead_time / $direct_time) * 100) : 0;
 
-                    // Add 3 minutes for pickup time at each stop (except last which is event)
-                    if ($i < count($passengers)) {
-                        $cumulative_time += 3;
-                    }
-                }
-
-                // Calculate departure time
-                $departure_time = $this->calculateDepartureTime($cumulative_time);
-
-                // Check if driver has passengers
-                if (count($passengers) > 0) {
-                    // Calculate overhead (extra time due to carpooling)
-                    $overhead_time = $cumulative_time - $direct_time;
-                    $overhead_percentage = $direct_time > 0 ? round(($overhead_time / $direct_time) * 100) : 0;
-
-                    $assignments[] = [
+                $assignments[] = [
                         'driver_id' => $best_driver['id'],
                         'driver_name' => $best_driver['name'],
                         'vehicle' => ($best_driver['vehicle_make'] ?? 'Vehicle') . ' ' .
@@ -449,11 +525,91 @@ class EnhancedCarpoolOptimizer {
                     ];
                 }
 
-                // Mark driver as assigned
-                $update_query = "UPDATE users SET is_assigned_driver = TRUE WHERE id = :driver_id";
-                $update_stmt = $this->db->prepare($update_query);
-                $update_stmt->bindParam(':driver_id', $best_driver['id']);
-                $update_stmt->execute();
+            // Mark driver as assigned
+            $update_query = "UPDATE users SET is_assigned_driver = TRUE WHERE id = :driver_id";
+            $update_stmt = $this->db->prepare($update_query);
+            $update_stmt->bindParam(':driver_id', $best_driver['id']);
+            $update_stmt->execute();
+        }
+
+        return $assignments;
+    }
+
+    private function ensureAllParticipantsAssigned($assignments) {
+        // Track who's been assigned
+        $assigned_ids = [];
+
+        foreach ($assignments as $assignment) {
+            // Add driver
+            $assigned_ids[] = $assignment['driver_id'];
+
+            // Add passengers
+            if (isset($assignment['passengers'])) {
+                foreach ($assignment['passengers'] as $passenger) {
+                    $assigned_ids[] = $passenger['id'];
+                }
+            }
+        }
+
+        // Find unassigned participants
+        $unassigned = [];
+        foreach ($this->participants as $participant) {
+            if (!in_array($participant['id'], $assigned_ids)) {
+                $unassigned[] = $participant;
+            }
+        }
+
+        // If there are unassigned participants, try to fit them into existing routes
+        if (count($unassigned) > 0) {
+            foreach ($unassigned as $participant) {
+                $assigned = false;
+
+                // Try to add to an existing route with capacity
+                for ($i = 0; $i < count($assignments); $i++) {
+                    $current_passengers = isset($assignments[$i]['passengers']) ? count($assignments[$i]['passengers']) : 0;
+                    $capacity = $assignments[$i]['capacity'];
+
+                    if ($current_passengers < $capacity) {
+                        // Add this participant as a passenger
+                        if (!isset($assignments[$i]['passengers'])) {
+                            $assignments[$i]['passengers'] = [];
+                        }
+
+                        $assignments[$i]['passengers'][] = [
+                            'id' => $participant['id'],
+                            'name' => $participant['name'],
+                            'address' => $participant['address'],
+                            'lat' => $participant['lat'],
+                            'lng' => $participant['lng']
+                        ];
+
+                        $assigned = true;
+                        break;
+                    }
+                }
+
+                // If still not assigned and participant can drive, have them drive solo
+                if (!$assigned && $participant['willing_to_drive'] && $participant['vehicle_capacity'] > 0) {
+                    // Create solo driver assignment
+                    $assignments[] = [
+                        'driver_id' => $participant['id'],
+                        'driver_name' => $participant['name'],
+                        'vehicle' => ($participant['vehicle_make'] ?? 'Vehicle') . ' ' .
+                                   ($participant['vehicle_model'] ?? ''),
+                        'capacity' => $participant['vehicle_capacity'],
+                        'passengers' => [],
+                        'total_distance' => 0,
+                        'departure_time' => $this->calculateDepartureTime(30),
+                        'estimated_travel_time' => '30 minutes',
+                        'direct_distance' => 0,
+                        'direct_time' => '30 minutes',
+                        'overhead_time' => '0 minutes',
+                        'overhead_percentage' => '0%',
+                        'coordinates' => [],
+                        'has_passengers' => false,
+                        'direct_to_destination' => true
+                    ];
+                }
             }
         }
 
