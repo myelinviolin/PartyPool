@@ -333,6 +333,102 @@ class EnhancedCarpoolOptimizer {
             }
         }
 
+        // CRITICAL: Ensure ALL participants are assigned (everyone needs to get to the event!)
+        // Check who's been assigned so far
+        $all_assigned_ids = [];
+        foreach ($assignments as $assignment) {
+            $all_assigned_ids[] = $assignment['driver_id'];
+            if (isset($assignment['passengers'])) {
+                foreach ($assignment['passengers'] as $passenger) {
+                    $all_assigned_ids[] = $passenger['id'];
+                }
+            }
+        }
+
+        // Find any remaining unassigned participants
+        $still_unassigned = [];
+        foreach ($this->participants as $participant) {
+            if (!in_array($participant['id'], $all_assigned_ids)) {
+                $still_unassigned[] = $participant;
+            }
+        }
+
+        // If anyone is still unassigned, they need transportation!
+        if (count($still_unassigned) > 0) {
+            foreach ($still_unassigned as $participant) {
+                // Check if this person can drive
+                $can_drive = false;
+                foreach ($this->drivers as $driver) {
+                    if ($driver['id'] == $participant['id']) {
+                        $can_drive = true;
+                        break;
+                    }
+                }
+
+                if ($can_drive) {
+                    // Make them a solo driver
+                    $direct_distance = 0;
+                    $direct_time = 0;
+                    $coordinates = [];
+
+                    if ($participant['lat'] && $participant['lng']) {
+                        $direct_distance = $this->calculateDistance(
+                            $participant['lat'],
+                            $participant['lng'],
+                            $this->event['event_lat'],
+                            $this->event['event_lng']
+                        );
+                        $direct_time = round($direct_distance * 2); // Rough estimate
+                        $coordinates = [
+                            [(float)$participant['lat'], (float)$participant['lng']],
+                            [(float)$this->event['event_lat'], (float)$this->event['event_lng']]
+                        ];
+                    }
+
+                    // Create solo route for this unassigned driver
+                    $assignments[] = [
+                        'driver_id' => $participant['id'],
+                        'driver_name' => $participant['name'],
+                        'vehicle' => ($participant['vehicle_make'] ?? 'Vehicle') . ' ' . ($participant['vehicle_model'] ?? ''),
+                        'capacity' => $participant['vehicle_capacity'],
+                        'passengers' => [],
+                        'total_distance' => round($direct_distance, 2),
+                        'direct_distance' => round($direct_distance, 2),
+                        'direct_time' => $direct_time . ' minutes',
+                        'departure_time' => date('g:i A', strtotime($this->event['event_date'] . ' ' . $this->event['event_time']) - ($direct_time * 60) - 600),
+                        'estimated_travel_time' => $direct_time . ' minutes',
+                        'coordinates' => $coordinates,
+                        'overhead_time' => 0,
+                        'has_passengers' => false
+                    ];
+                } else {
+                    // Non-driver is unassigned - try to add them to an existing route with capacity
+                    $added = false;
+                    for ($i = 0; $i < count($assignments); $i++) {
+                        $current_passengers = isset($assignments[$i]['passengers']) ? count($assignments[$i]['passengers']) : 0;
+                        if ($current_passengers < $assignments[$i]['capacity']) {
+                            // Add to this route
+                            $assignments[$i]['passengers'][] = [
+                                'id' => $participant['id'],
+                                'name' => $participant['name'],
+                                'address' => $participant['address'] ?? '',
+                                'lat' => $participant['lat'],
+                                'lng' => $participant['lng']
+                            ];
+                            $added = true;
+                            break;
+                        }
+                    }
+
+                    if (!$added) {
+                        // This is a critical error - someone can't get to the event!
+                        // This should never happen if we have enough capacity
+                        error_log("CRITICAL: Participant {$participant['name']} cannot be assigned - no capacity!");
+                    }
+                }
+            }
+        }
+
         // Calculate statistics
         $total_participants = count($this->participants);
         $vehicles_needed = count($assignments);
