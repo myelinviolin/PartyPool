@@ -194,14 +194,16 @@ class EnhancedCarpoolOptimizer {
         // Ensure we don't try to use more vehicles than available drivers
         $actual_vehicles = min($this->target_vehicles, count($this->drivers));
 
-        // Perform clustering with target number of vehicles
-        $clusters = $this->performEnhancedClustering($actual_vehicles);
-
-        // Assign drivers to clusters
-        $assignments = $this->assignDriversWithOverhead($clusters);
-
-        // Handle any unassigned participants
-        $assignments = $this->ensureAllParticipantsAssigned($assignments);
+        // When we have a specific target and enough drivers, use optimized selection
+        if ($this->target_vehicles !== null && $this->target_vehicles <= count($this->drivers) && $this->target_vehicles >= $this->calculateMinimumVehicles()) {
+            // Use new method for exact target optimization
+            $assignments = $this->optimizeForExactTarget($actual_vehicles);
+        } else {
+            // Use clustering approach for automatic optimization or when target can't be met
+            $clusters = $this->performEnhancedClustering($actual_vehicles);
+            $assignments = $this->assignDriversWithOverhead($clusters);
+            $assignments = $this->ensureAllParticipantsAssigned($assignments);
+        }
 
         // Verify all participants are assigned exactly once
         $all_assigned = [];
@@ -448,6 +450,205 @@ class EnhancedCarpoolOptimizer {
             'assigned_count' => count($all_assigned),
             'unique_assigned' => count(array_unique($all_assigned))
         ];
+    }
+
+    private function optimizeForExactTarget($target_vehicles) {
+        // This method selects exactly the target number of drivers and assigns passengers optimally
+        $assignments = [];
+
+        // Step 1: Determine who will be drivers vs passengers
+        $selected_drivers = [];
+        $passengers_to_assign = [];
+
+        // Separate non-drivers (must be passengers) from willing drivers
+        $must_be_passengers = [];
+        $can_be_drivers = $this->drivers;
+
+        foreach ($this->participants as $participant) {
+            $is_driver = false;
+            foreach ($this->drivers as $driver) {
+                if ($driver['id'] == $participant['id']) {
+                    $is_driver = true;
+                    break;
+                }
+            }
+            if (!$is_driver) {
+                $must_be_passengers[] = $participant;
+            }
+        }
+
+        // Calculate how many drivers we need to make passengers
+        $drivers_as_passengers_needed = count($this->participants) - $target_vehicles - count($must_be_passengers);
+
+        // Step 2: Select which drivers to use based on geographic distribution and distance from event
+        // Sort drivers by distance from event (those farther away are better as solo drivers)
+        $drivers_with_distance = [];
+        foreach ($can_be_drivers as $driver) {
+            $distance = 0;
+            if ($driver['lat'] && $driver['lng']) {
+                $distance = $this->calculateDistance(
+                    $driver['lat'],
+                    $driver['lng'],
+                    $this->event['event_lat'],
+                    $this->event['event_lng']
+                );
+            }
+            $driver['distance_to_event'] = $distance;
+            $drivers_with_distance[] = $driver;
+        }
+
+        // Sort by distance (farthest first - they're good candidates for solo driving)
+        usort($drivers_with_distance, function($a, $b) {
+            return $b['distance_to_event'] <=> $a['distance_to_event'];
+        });
+
+        // Select drivers: prefer those far from event and with good capacity
+        $selected_driver_ids = [];
+        for ($i = 0; $i < $target_vehicles && $i < count($drivers_with_distance); $i++) {
+            $selected_drivers[] = $drivers_with_distance[$i];
+            $selected_driver_ids[] = $drivers_with_distance[$i]['id'];
+        }
+
+        // Remaining drivers become passengers
+        foreach ($drivers_with_distance as $driver) {
+            if (!in_array($driver['id'], $selected_driver_ids)) {
+                $passengers_to_assign[] = $driver;
+            }
+        }
+
+        // Add non-drivers to passenger list
+        $passengers_to_assign = array_merge($must_be_passengers, $passengers_to_assign);
+
+        // Step 3: Create initial routes for all selected drivers (they may end up solo)
+        foreach ($selected_drivers as $driver) {
+            $direct_distance = $driver['distance_to_event'];
+            $direct_time = round($direct_distance * 2); // Rough estimate
+
+            $coordinates = [];
+            if ($driver['lat'] && $driver['lng']) {
+                $coordinates = [
+                    [(float)$driver['lat'], (float)$driver['lng']],
+                    [(float)$this->event['event_lat'], (float)$this->event['event_lng']]
+                ];
+            }
+
+            $assignments[] = [
+                'driver_id' => $driver['id'],
+                'driver_name' => $driver['name'],
+                'vehicle' => ($driver['vehicle_make'] ?? 'Vehicle') . ' ' . ($driver['vehicle_model'] ?? ''),
+                'capacity' => $driver['vehicle_capacity'],
+                'passengers' => [],
+                'total_distance' => round($direct_distance, 2),
+                'direct_distance' => round($direct_distance, 2),
+                'direct_time' => $direct_time . ' minutes',
+                'departure_time' => date('g:i A', strtotime($this->event['event_date'] . ' ' . $this->event['event_time']) - ($direct_time * 60) - 600),
+                'estimated_travel_time' => $direct_time . ' minutes',
+                'coordinates' => $coordinates,
+                'overhead_time' => 0,
+                'has_passengers' => false
+            ];
+        }
+
+        // Step 4: Assign passengers to the nearest suitable driver
+        foreach ($passengers_to_assign as $passenger) {
+            $best_assignment_index = -1;
+            $best_score = PHP_FLOAT_MAX;
+
+            for ($i = 0; $i < count($assignments); $i++) {
+                // Check capacity
+                if (count($assignments[$i]['passengers']) >= $assignments[$i]['capacity']) {
+                    continue;
+                }
+
+                // Calculate distance from passenger to driver
+                $driver_id = $assignments[$i]['driver_id'];
+                $driver_data = null;
+                foreach ($selected_drivers as $d) {
+                    if ($d['id'] == $driver_id) {
+                        $driver_data = $d;
+                        break;
+                    }
+                }
+
+                if (!$driver_data || !$passenger['lat'] || !$passenger['lng']) {
+                    continue;
+                }
+
+                // Score based on distance between passenger and driver
+                $distance = $this->calculateDistance(
+                    $passenger['lat'],
+                    $passenger['lng'],
+                    $driver_data['lat'],
+                    $driver_data['lng']
+                );
+
+                // Don't penalize drivers who are already far from event - that's intentional
+                // Just find the closest driver to the passenger
+                if ($distance < $best_score) {
+                    $best_score = $distance;
+                    $best_assignment_index = $i;
+                }
+            }
+
+            // Assign to best driver if found
+            if ($best_assignment_index >= 0) {
+                $assignments[$best_assignment_index]['passengers'][] = [
+                    'id' => $passenger['id'],
+                    'name' => $passenger['name'],
+                    'address' => $passenger['address'] ?? '',
+                    'lat' => $passenger['lat'],
+                    'lng' => $passenger['lng']
+                ];
+                $assignments[$best_assignment_index]['has_passengers'] = true;
+            }
+        }
+
+        // Step 5: Update route details for drivers with passengers
+        for ($i = 0; $i < count($assignments); $i++) {
+            if (count($assignments[$i]['passengers']) > 0) {
+                // Recalculate route with passengers
+                $driver_id = $assignments[$i]['driver_id'];
+                $driver_data = null;
+                foreach ($selected_drivers as $d) {
+                    if ($d['id'] == $driver_id) {
+                        $driver_data = $d;
+                        break;
+                    }
+                }
+
+                $total_distance = 0;
+                $coordinates = [];
+
+                // Start from driver's location
+                if ($driver_data['lat'] && $driver_data['lng']) {
+                    $coordinates[] = [(float)$driver_data['lat'], (float)$driver_data['lng']];
+                    $last_lat = $driver_data['lat'];
+                    $last_lng = $driver_data['lng'];
+
+                    // Add passenger pickups
+                    foreach ($assignments[$i]['passengers'] as $p) {
+                        if ($p['lat'] && $p['lng']) {
+                            $distance = $this->calculateDistance($last_lat, $last_lng, $p['lat'], $p['lng']);
+                            $total_distance += $distance;
+                            $coordinates[] = [(float)$p['lat'], (float)$p['lng']];
+                            $last_lat = $p['lat'];
+                            $last_lng = $p['lng'];
+                        }
+                    }
+
+                    // Add distance to event
+                    $distance = $this->calculateDistance($last_lat, $last_lng, $this->event['event_lat'], $this->event['event_lng']);
+                    $total_distance += $distance;
+                    $coordinates[] = [(float)$this->event['event_lat'], (float)$this->event['event_lng']];
+
+                    $assignments[$i]['total_distance'] = round($total_distance, 2);
+                    $assignments[$i]['coordinates'] = $coordinates;
+                    $assignments[$i]['overhead_time'] = round(($total_distance - $assignments[$i]['direct_distance']) * 2);
+                }
+            }
+        }
+
+        return $assignments;
     }
 
     private function performEnhancedClustering($num_clusters) {
