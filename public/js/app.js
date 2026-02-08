@@ -340,24 +340,82 @@ function displayNoOptimizationMessage() {
 
 // Display routes on the map
 function displayRoutesOnMap(routes) {
-    // Different colors for each route
-    const colors = ['#28a745', '#17a2b8', '#ffc107', '#dc3545', '#6610f2', '#e83e8c'];
+    // High contrast colors for better visibility
+    const routeColors = [
+        '#FF0000', // Bright Red
+        '#0066FF', // Bright Blue
+        '#00CC00', // Bright Green
+        '#FF6600', // Orange
+        '#9900FF', // Purple
+        '#FF0099', // Magenta
+        '#00CCCC', // Cyan
+        '#FFCC00', // Gold
+        '#663300', // Brown
+        '#FF66CC', // Pink
+        '#0099CC', // Teal
+        '#99CC00'  // Lime
+    ];
+
+    // Build legend HTML
+    const legendHtml = ['<div class="bg-white p-2 rounded shadow" style="max-height: 200px; overflow-y: auto;">'];
+    legendHtml.push('<h6 class="mb-2 fw-bold text-center">Carpool Routes</h6>');
 
     routes.forEach((route, index) => {
         if (route.coordinates && route.coordinates.length > 1) {
-            // Create polyline for the route
-            const color = colors[index % colors.length];
+            const color = routeColors[index % routeColors.length];
+            const hasPax = route.passengers && route.passengers.length > 0;
+
+            // Draw white shadow line for visibility
+            const shadowLine = L.polyline(route.coordinates, {
+                color: '#FFFFFF',
+                weight: 7,
+                opacity: 0.8
+            }).addTo(map);
+            markers.push(shadowLine);
+
+            // Create main colored route line
             const routeLine = L.polyline(route.coordinates, {
                 color: color,
-                weight: 3,
-                opacity: 0.7,
-                smoothFactor: 1
+                weight: 5,
+                opacity: 0.9,
+                smoothFactor: 1,
+                dashArray: hasPax ? null : '10, 10' // Dashed for solo drivers
             }).addTo(map);
+
+            // Add popup with route info
+            const driverName = route.driver_name.replace(/Driver \d+ - /, '');
+            const paxCount = route.passengers ? route.passengers.length : 0;
+            const popupText = paxCount > 0 ?
+                `<b>${driverName}</b><br>${paxCount} passenger(s)` :
+                `<b>${driverName}</b><br>Solo driver`;
+            routeLine.bindPopup(popupText);
 
             // Add to global markers array for cleanup
             markers.push(routeLine);
+
+            // Add to legend
+            const routeType = paxCount === 0 ? 'Solo' : `${paxCount} pax`;
+            legendHtml.push(`
+                <div class="d-flex align-items-center mb-1">
+                    <div style="width: 25px; height: 3px; background: ${color}; margin-right: 6px; ${hasPax ? '' : 'background-image: repeating-linear-gradient(90deg, transparent, transparent 3px, white 3px, white 6px);'}"></div>
+                    <small>${driverName} (${routeType})</small>
+                </div>
+            `);
         }
     });
+
+    // Complete and add legend to map
+    legendHtml.push('</div>');
+    const legendControl = L.control({position: 'topright'});
+    legendControl.onAdd = function() {
+        const div = L.DomUtil.create('div', '');
+        div.innerHTML = legendHtml.join('');
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.disableScrollPropagation(div);
+        return div;
+    };
+    legendControl.addTo(map);
+    markers.push(legendControl);
 }
 
 // Setup event listeners

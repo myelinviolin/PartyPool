@@ -1163,22 +1163,77 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             window.routeLines = [];
 
             // Draw routes for each vehicle
-            assignments.routes.forEach(route => {
+            // Add a route legend container
+            const legendHtml = ['<div class="route-legend bg-white p-2 rounded shadow-sm" style="position: absolute; top: 10px; right: 10px; z-index: 1000; max-height: 300px; overflow-y: auto;">'];
+            legendHtml.push('<h6 class="mb-2 text-center fw-bold">Carpool Routes</h6>');
+
+            assignments.routes.forEach((route, index) => {
                 if (route.coordinates && route.coordinates.length > 1) {
+                    const color = getRouteColor(index);
+
+                    // Draw main route line with shadow effect for visibility
+                    // First draw a wider white line as background
+                    const shadowLine = L.polyline(route.coordinates, {
+                        color: '#FFFFFF',
+                        weight: 7,
+                        opacity: 0.8
+                    }).addTo(map);
+                    markers.push(shadowLine);
+
+                    // Then draw the colored route on top
                     const polyline = L.polyline(route.coordinates, {
-                        color: getRandomColor(),
-                        weight: 3,
-                        opacity: 0.7
+                        color: color,
+                        weight: 5,
+                        opacity: 0.9,
+                        smoothFactor: 1,
+                        dashArray: route.has_passengers ? null : '10, 10' // Dashed line for solo drivers
                     }).addTo(map);
                     markers.push(polyline);
                     window.routeLines.push(polyline);
+
+                    // Add route to legend
+                    const driverName = route.driver_name.replace(/Driver \d+ - /, '');
+                    const passengerCount = route.passengers ? route.passengers.length : 0;
+                    const routeType = passengerCount === 0 ? '(Solo)' : `(${passengerCount} passengers)`;
+                    legendHtml.push(`
+                        <div class="d-flex align-items-center mb-1">
+                            <div style="width: 30px; height: 3px; background-color: ${color}; margin-right: 8px; ${route.has_passengers ? '' : 'background-image: repeating-linear-gradient(90deg, transparent, transparent 5px, white 5px, white 10px);'}"></div>
+                            <small>${driverName} ${routeType}</small>
+                        </div>
+                    `);
                 }
             });
+
+            // Complete and add legend to map
+            legendHtml.push('</div>');
+            const legendContainer = L.control({position: 'topright'});
+            legendContainer.onAdd = function() {
+                const div = L.DomUtil.create('div', '');
+                div.innerHTML = legendHtml.join('');
+                return div;
+            };
+            legendContainer.addTo(map);
+            markers.push(legendContainer);
         }
 
-        function getRandomColor() {
-            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#74B9FF'];
-            return colors[Math.floor(Math.random() * colors.length)];
+        // High contrast colors for route visibility
+        const routeColors = [
+            '#FF0000', // Bright Red
+            '#0066FF', // Bright Blue
+            '#00CC00', // Bright Green
+            '#FF6600', // Orange
+            '#9900FF', // Purple
+            '#FF0099', // Magenta
+            '#00CCCC', // Cyan
+            '#FFCC00', // Gold
+            '#663300', // Brown
+            '#FF66CC', // Pink
+            '#0099CC', // Teal
+            '#99CC00'  // Lime
+        ];
+
+        function getRouteColor(index) {
+            return routeColors[index % routeColors.length];
         }
 
         async function saveAssignments() {
