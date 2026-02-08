@@ -221,8 +221,19 @@ class EnhancedCarpoolOptimizer {
         }
 
         // Check for unassigned participants
+        // But don't count reserved drivers as unassigned - they're intentionally unassigned for solo routes
+        $reserved_driver_ids = [];
+        if ($this->target_vehicles !== null && count($assignments) < $this->target_vehicles) {
+            $assigned_driver_ids = array_column($assignments, 'driver_id');
+            foreach ($this->drivers as $driver) {
+                if (!in_array($driver['id'], $assigned_driver_ids)) {
+                    $reserved_driver_ids[] = $driver['id'];
+                }
+            }
+        }
+
         foreach ($this->participants as $participant) {
-            if (!in_array($participant['id'], $all_assigned)) {
+            if (!in_array($participant['id'], $all_assigned) && !in_array($participant['id'], $reserved_driver_ids)) {
                 $unassigned[] = $participant;
             }
         }
@@ -244,7 +255,7 @@ class EnhancedCarpoolOptimizer {
             if (count($unassigned) > 0) {
                 $error_msg .= count($unassigned) . ' participants not assigned. ';
                 // Try to provide reason
-                if ($actual_vehicles < $num_clusters) {
+                if ($actual_vehicles < $this->target_vehicles) {
                     $error_msg .= 'Not enough drivers available. ';
                 }
             }
@@ -261,12 +272,24 @@ class EnhancedCarpoolOptimizer {
         // If we have a target and didn't meet it, add empty routes with remaining drivers
         if ($this->target_vehicles !== null && count($assignments) < $this->target_vehicles) {
             $assigned_driver_ids = array_column($assignments, 'driver_id');
+
+            // Also get all assigned passenger IDs to avoid duplicates
+            $assigned_passenger_ids = [];
+            foreach ($assignments as $assignment) {
+                if (isset($assignment['passengers'])) {
+                    foreach ($assignment['passengers'] as $passenger) {
+                        $assigned_passenger_ids[] = $passenger['id'];
+                    }
+                }
+            }
+
             $remaining_needed = $this->target_vehicles - count($assignments);
 
             foreach ($this->drivers as $driver) {
                 if ($remaining_needed <= 0) break;
 
-                if (!in_array($driver['id'], $assigned_driver_ids)) {
+                // Skip if already a driver OR already assigned as a passenger
+                if (!in_array($driver['id'], $assigned_driver_ids) && !in_array($driver['id'], $assigned_passenger_ids)) {
                     // Calculate direct distance for solo driver
                     $direct_distance = 0;
                     $direct_time = 0;
@@ -340,11 +363,42 @@ class EnhancedCarpoolOptimizer {
             $clusters[$i] = [];
         }
 
+        // When we have a target, reserve drivers who will be needed
+        $participants_to_cluster = $this->participants;
+        if ($this->target_vehicles !== null && $this->target_vehicles <= count($this->drivers)) {
+            // We need to reserve drivers - only cluster non-drivers and excess drivers
+            $num_drivers_to_reserve = min($this->target_vehicles, count($this->drivers));
+            $drivers_as_passengers_allowed = count($this->drivers) - $num_drivers_to_reserve;
+
+            // Separate participants into drivers and non-drivers
+            $driver_ids = array_column($this->drivers, 'id');
+            $non_drivers = [];
+            $drivers_list = [];
+
+            foreach ($this->participants as $p) {
+                if (in_array($p['id'], $driver_ids)) {
+                    $drivers_list[] = $p;
+                } else {
+                    $non_drivers[] = $p;
+                }
+            }
+
+            // Only use some drivers as passengers, prioritize non-drivers
+            $participants_to_cluster = $non_drivers;
+            if ($drivers_as_passengers_allowed > 0) {
+                // Add only the allowed number of drivers as potential passengers
+                $participants_to_cluster = array_merge(
+                    $participants_to_cluster,
+                    array_slice($drivers_list, 0, $drivers_as_passengers_allowed)
+                );
+            }
+        }
+
         // Sort participants by location (simple geographic grouping)
         $participants_with_coords = [];
         $participants_without_coords = [];
 
-        foreach ($this->participants as $participant) {
+        foreach ($participants_to_cluster as $participant) {
             if (!empty($participant['lat']) && !empty($participant['lng'])) {
                 $participants_with_coords[] = $participant;
             } else {
@@ -363,13 +417,13 @@ class EnhancedCarpoolOptimizer {
         });
 
         // Distribute participants evenly across clusters, keeping nearby people together
-        $all_participants = array_merge($participants_with_coords, $participants_without_coords);
+        $all_participants_to_cluster = array_merge($participants_with_coords, $participants_without_coords);
 
         // Calculate ideal cluster size
-        $ideal_size = ceil(count($all_participants) / $num_clusters);
+        $ideal_size = ceil(count($all_participants_to_cluster) / $num_clusters);
 
         $current_cluster = 0;
-        foreach ($all_participants as $participant) {
+        foreach ($all_participants_to_cluster as $participant) {
             // Move to next cluster if current is at ideal size
             if (count($clusters[$current_cluster]) >= $ideal_size && $current_cluster < $num_clusters - 1) {
                 $current_cluster++;
@@ -490,6 +544,11 @@ class EnhancedCarpoolOptimizer {
 
             // Add passengers
             foreach ($cluster as $participant) {
+                // Skip if this participant is the driver for this route
+                if ($participant['id'] == $best_driver['id']) {
+                    continue;
+                }
+
                 // Skip if this participant is already assigned (as driver or passenger)
                 if (in_array($participant['id'], $assigned_participants)) {
                     continue;
@@ -616,8 +675,21 @@ class EnhancedCarpoolOptimizer {
 
         // Find unassigned participants
         $unassigned = [];
+
+        // When we have a target, don't force-assign reserved drivers as passengers
+        $reserved_driver_ids = [];
+        if ($this->target_vehicles !== null && count($assignments) < $this->target_vehicles) {
+            // These drivers should be reserved for solo routes
+            $assigned_driver_ids = array_column($assignments, 'driver_id');
+            foreach ($this->drivers as $driver) {
+                if (!in_array($driver['id'], $assigned_driver_ids)) {
+                    $reserved_driver_ids[] = $driver['id'];
+                }
+            }
+        }
+
         foreach ($this->participants as $participant) {
-            if (!in_array($participant['id'], $assigned_ids)) {
+            if (!in_array($participant['id'], $assigned_ids) && !in_array($participant['id'], $reserved_driver_ids)) {
                 $unassigned[] = $participant;
             }
         }
