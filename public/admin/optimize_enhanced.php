@@ -267,6 +267,27 @@ class EnhancedCarpoolOptimizer {
                 if ($remaining_needed <= 0) break;
 
                 if (!in_array($driver['id'], $assigned_driver_ids)) {
+                    // Calculate direct distance for solo driver
+                    $direct_distance = 0;
+                    $direct_time = 0;
+                    $coordinates = [];
+
+                    if ($driver['lat'] && $driver['lng']) {
+                        $direct_distance = $this->calculateDistance(
+                            $driver['lat'],
+                            $driver['lng'],
+                            $this->event['event_lat'],
+                            $this->event['event_lng']
+                        );
+                        $direct_time = round($this->calculateTravelTime($direct_distance));
+
+                        // Add coordinates for driver start and event end
+                        $coordinates = [
+                            [(float)$driver['lat'], (float)$driver['lng']],
+                            [(float)$this->event['event_lat'], (float)$this->event['event_lng']]
+                        ];
+                    }
+
                     // Create an empty route with just the driver
                     $assignments[] = [
                         'driver_id' => $driver['id'],
@@ -274,10 +295,12 @@ class EnhancedCarpoolOptimizer {
                         'vehicle' => ($driver['vehicle_make'] ?? 'Vehicle') . ' ' . ($driver['vehicle_model'] ?? ''),
                         'capacity' => $driver['vehicle_capacity'],
                         'passengers' => [],
-                        'total_distance' => 0,
-                        'departure_time' => date('g:i A', strtotime($this->event['event_date'] . ' ' . $this->event['event_time']) - 1800), // 30 min before event
-                        'estimated_travel_time' => '0 minutes',
-                        'coordinates' => [],
+                        'total_distance' => round($direct_distance, 2),
+                        'direct_distance' => round($direct_distance, 2),
+                        'direct_time' => $direct_time . ' minutes',
+                        'departure_time' => date('g:i A', strtotime($this->event['event_date'] . ' ' . $this->event['event_time']) - ($direct_time * 60) - 600), // Add buffer
+                        'estimated_travel_time' => $direct_time . ' minutes',
+                        'coordinates' => $coordinates,
                         'overhead_time' => 0,
                         'has_passengers' => false
                     ];

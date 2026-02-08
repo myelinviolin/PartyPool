@@ -709,7 +709,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 const statusDiv = passengerMatch.card.querySelector('.assignment-status');
                                 if (statusDiv) {
                                     statusDiv.innerHTML = `<span class="badge bg-secondary">
-                                        <i class="fas fa-user-friends"></i> Riding with #${route.driver_name}
+                                        <i class="fas fa-user-friends"></i> Riding with ${route.driver_name}
                                     </span>`;
                                 }
                             } else {
