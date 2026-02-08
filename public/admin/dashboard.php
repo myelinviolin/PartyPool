@@ -146,7 +146,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 <i class="fas fa-user-shield"></i> Admin Dashboard
             </a>
             <div class="ms-auto">
-                <a href="/index.html" class="btn btn-outline-light btn-sm me-2">
+                <a href="/" class="btn btn-outline-light btn-sm me-2">
                     <i class="fas fa-home"></i> Home Page
                 </a>
                 <span class="navbar-text text-white me-3">
