@@ -258,6 +258,35 @@ class EnhancedCarpoolOptimizer {
             ];
         }
 
+        // If we have a target and didn't meet it, add empty routes with remaining drivers
+        if ($this->target_vehicles !== null && count($assignments) < $this->target_vehicles) {
+            $assigned_driver_ids = array_column($assignments, 'driver_id');
+            $remaining_needed = $this->target_vehicles - count($assignments);
+
+            foreach ($this->drivers as $driver) {
+                if ($remaining_needed <= 0) break;
+
+                if (!in_array($driver['id'], $assigned_driver_ids)) {
+                    // Create an empty route with just the driver
+                    $assignments[] = [
+                        'driver_id' => $driver['id'],
+                        'driver_name' => $driver['name'],
+                        'vehicle' => ($driver['vehicle_make'] ?? 'Vehicle') . ' ' . ($driver['vehicle_model'] ?? ''),
+                        'capacity' => $driver['vehicle_capacity'],
+                        'passengers' => [],
+                        'total_distance' => 0,
+                        'departure_time' => date('g:i A', strtotime($this->event['event_date'] . ' ' . $this->event['event_time']) - 1800), // 30 min before event
+                        'estimated_travel_time' => '0 minutes',
+                        'coordinates' => [],
+                        'overhead_time' => 0,
+                        'has_passengers' => false
+                    ];
+                    $assigned_driver_ids[] = $driver['id'];
+                    $remaining_needed--;
+                }
+            }
+        }
+
         // Calculate statistics
         $total_participants = count($this->participants);
         $vehicles_needed = count($assignments);
@@ -381,9 +410,20 @@ class EnhancedCarpoolOptimizer {
                 $capacity_diff = abs($driver['vehicle_capacity'] - count($cluster));
                 $score = $distance + ($capacity_diff * 2);
 
-                if ($score < $best_score && $driver['vehicle_capacity'] >= count($cluster) - 1) {
-                    $best_driver = $driver;
-                    $best_score = $score;
+                // When target_vehicles is set, we must assign a driver to every cluster
+                // Remove capacity restriction if we have a target to meet
+                if ($this->target_vehicles !== null) {
+                    // Always consider the driver, even if capacity is insufficient
+                    if ($score < $best_score) {
+                        $best_driver = $driver;
+                        $best_score = $score;
+                    }
+                } else {
+                    // Original logic: only assign if driver has enough capacity
+                    if ($score < $best_score && $driver['vehicle_capacity'] >= count($cluster) - 1) {
+                        $best_driver = $driver;
+                        $best_score = $score;
+                    }
                 }
             }
 
@@ -391,6 +431,16 @@ class EnhancedCarpoolOptimizer {
                 $cluster_drivers[$cluster_index] = $best_driver;
                 $used_driver_ids[] = $best_driver['id'];
                 $assigned_participants[] = $best_driver['id']; // Mark driver as assigned
+            } else if ($this->target_vehicles !== null && count($used_driver_ids) < count($this->drivers)) {
+                // If we have a target and still have unused drivers, force assignment
+                foreach ($this->drivers as $driver) {
+                    if (!in_array($driver['id'], $used_driver_ids)) {
+                        $cluster_drivers[$cluster_index] = $driver;
+                        $used_driver_ids[] = $driver['id'];
+                        $assigned_participants[] = $driver['id'];
+                        break;
+                    }
+                }
             }
         }
 
@@ -432,8 +482,12 @@ class EnhancedCarpoolOptimizer {
                     continue;
                 }
 
-                // Skip if vehicle is full
-                if (count($passengers) >= $best_driver['vehicle_capacity']) {
+                // Skip if vehicle is full (but be more lenient if target_vehicles is set)
+                if ($this->target_vehicles === null && count($passengers) >= $best_driver['vehicle_capacity']) {
+                    // In automatic mode, respect vehicle capacity strictly
+                    break;
+                } else if ($this->target_vehicles !== null && count($passengers) >= $best_driver['vehicle_capacity'] + 2) {
+                    // In target mode, allow slight overcapacity (up to 2 extra) to ensure everyone gets assigned
                     break;
                 }
 
