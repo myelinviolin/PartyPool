@@ -226,17 +226,138 @@ async function loadUsers() {
     }
 }
 
-// Load carpool matches (simplified for stats only)
+// Load optimization results and display carpool assignments
 async function loadCarpools() {
-    // This function is kept minimal since we removed the matches display
-    // It can be extended later if needed for other purposes
     try {
-        const response = await fetch(`/api/carpools.php?event_id=${currentEventId}`);
-        const carpools = await response.json();
-        // Could update optimization status here if needed
+        const response = await fetch(`/api/optimization-results.php?event_id=${currentEventId}`);
+        const data = await response.json();
+
+        if (data.optimization_exists && data.routes && data.routes.length > 0) {
+            // Update optimization status
+            document.getElementById('optimizationStatus').textContent = 'Completed';
+
+            // Display carpool assignments in a simple format
+            displayCarpoolAssignments(data.routes);
+
+            // Add route markers to the map
+            displayRoutesOnMap(data.routes);
+        } else {
+            // No optimization yet
+            document.getElementById('optimizationStatus').textContent = 'Pending';
+            displayNoOptimizationMessage();
+        }
     } catch (error) {
-        console.error('Error loading carpools:', error);
+        console.error('Error loading optimization results:', error);
     }
+}
+
+// Display carpool assignments
+function displayCarpoolAssignments(routes) {
+    const container = document.querySelector('.container.my-5');
+
+    // Find or create assignments section
+    let assignmentsSection = document.getElementById('carpoolAssignments');
+    if (!assignmentsSection) {
+        assignmentsSection = document.createElement('div');
+        assignmentsSection.id = 'carpoolAssignments';
+        assignmentsSection.className = 'card shadow mb-4';
+        assignmentsSection.innerHTML = `
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    <i class="fas fa-route text-primary"></i> Carpool Assignments
+                </h5>
+                <div id="assignmentsList"></div>
+            </div>
+        `;
+
+        // Insert after the map section
+        const mapCard = document.querySelector('#map').closest('.card');
+        if (mapCard) {
+            mapCard.parentElement.insertBefore(assignmentsSection, mapCard.nextSibling);
+        }
+    }
+
+    // Build assignments HTML
+    let html = '<div class="row">';
+    routes.forEach((route, index) => {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-car"></i> ${route.driver_name}
+                        <span class="float-end badge bg-light text-dark">
+                            ${route.passengers.length}/${route.capacity} seats filled
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2">
+                            <strong>Vehicle:</strong> ${route.vehicle}<br>
+                            <strong>Departure:</strong> ${route.departure_time}<br>
+                            <strong>Route Distance:</strong> ${route.total_distance} miles
+                        </p>
+                        <h6 class="mt-3">Passengers:</h6>
+                        <ul class="list-unstyled">
+                            ${route.passengers.map(p => `
+                                <li class="mb-1">
+                                    <i class="fas fa-user text-info"></i> ${p.name}
+                                    ${p.pickup_time ? `<span class="text-muted ms-2">(Pickup: ${p.pickup_time})</span>` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    document.getElementById('assignmentsList').innerHTML = html;
+}
+
+// Display message when no optimization exists
+function displayNoOptimizationMessage() {
+    const container = document.querySelector('.container.my-5');
+
+    let messageSection = document.getElementById('carpoolAssignments');
+    if (!messageSection) {
+        messageSection = document.createElement('div');
+        messageSection.id = 'carpoolAssignments';
+        messageSection.className = 'card shadow mb-4';
+        messageSection.innerHTML = `
+            <div class="card-body text-center">
+                <i class="fas fa-clock text-warning" style="font-size: 48px;"></i>
+                <h5 class="mt-3">Optimization Pending</h5>
+                <p class="text-muted">The admin has not yet run the carpool optimization. Please check back later.</p>
+            </div>
+        `;
+
+        const mapCard = document.querySelector('#map').closest('.card');
+        if (mapCard) {
+            mapCard.parentElement.insertBefore(messageSection, mapCard.nextSibling);
+        }
+    }
+}
+
+// Display routes on the map
+function displayRoutesOnMap(routes) {
+    // Different colors for each route
+    const colors = ['#28a745', '#17a2b8', '#ffc107', '#dc3545', '#6610f2', '#e83e8c'];
+
+    routes.forEach((route, index) => {
+        if (route.coordinates && route.coordinates.length > 1) {
+            // Create polyline for the route
+            const color = colors[index % colors.length];
+            const routeLine = L.polyline(route.coordinates, {
+                color: color,
+                weight: 3,
+                opacity: 0.7,
+                smoothFactor: 1
+            }).addTo(map);
+
+            // Add to global markers array for cleanup
+            markers.push(routeLine);
+        }
+    });
 }
 
 // Setup event listeners

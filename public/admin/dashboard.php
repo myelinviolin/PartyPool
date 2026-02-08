@@ -379,6 +379,9 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             // Initially check button state
             checkFormChanged();
 
+            // Load saved optimization results if they exist
+            loadSavedOptimization();
+
             // Debug: Check if functions are accessible
             console.log('Functions available:');
             console.log('- checkFormChanged:', typeof window.checkFormChanged);
@@ -786,6 +789,38 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             }
 
             console.log('========================================');
+        }
+
+        async function loadSavedOptimization() {
+            try {
+                const response = await fetch('/api/optimization-results.php?event_id=<?php echo $event_id; ?>');
+                const data = await response.json();
+
+                if (data.optimization_exists && data.routes && data.routes.length > 0) {
+                    // Display the saved optimization results
+                    displayEnhancedResults({
+                        success: true,
+                        total_participants: data.total_participants,
+                        vehicles_needed: data.vehicles_needed,
+                        vehicles_saved: data.vehicles_saved,
+                        routes: data.routes
+                    });
+
+                    // Update status
+                    const statusDiv = document.getElementById('optimizationStatus');
+                    if (statusDiv) {
+                        const lastRun = new Date(data.optimization_run_at).toLocaleString();
+                        statusDiv.innerHTML = `<div class="text-success"><i class="fas fa-check-circle"></i> Last optimized: ${lastRun}</div>`;
+                    }
+
+                    // Update map with saved routes
+                    if (data.routes && map) {
+                        updateOptimizationMap(data.routes);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading saved optimization:', error);
+            }
         }
 
         async function runOptimization(targetVehicles = null) {
