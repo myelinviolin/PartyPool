@@ -844,15 +844,19 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             statusDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Running optimization...';
 
             try {
+                const requestBody = {
+                    event_id: <?php echo $event_id; ?>,
+                    target_vehicles: targetVehicles ? parseInt(targetVehicles) : null,
+                    max_drive_time: 50
+                };
+
+                console.log('Sending optimization request:', requestBody);
+
                 const response = await fetch('optimize_enhanced.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin', // Include cookies/session
-                    body: JSON.stringify({
-                        event_id: <?php echo $event_id; ?>,
-                        target_vehicles: targetVehicles ? parseInt(targetVehicles) : null,
-                        max_drive_time: 50
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 // Check if response is ok before parsing JSON
@@ -898,6 +902,12 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     if (result.routes) {
                         drawRoutes(result);
                     }
+
+                    // After successful optimization, wait a moment then reload saved data
+                    // This ensures the database has been updated with the new optimization
+                    setTimeout(() => {
+                        loadSavedOptimization();
+                    }, 1500);
                 } else {
                     statusDiv.innerHTML = '<div class="alert alert-danger mb-0 mt-2">Error: ' + result.message + '</div>';
                 }
@@ -909,12 +919,17 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         function rerunWithVehicles() {
             const newTarget = document.getElementById('newTargetVehicles').value;
             if (newTarget && newTarget > 0) {
+                console.log('Rerunning optimization with', newTarget, 'vehicles');
+
                 // Clear previous results
                 markers.forEach(m => map.removeLayer(m));
                 markers = [];
 
-                // Run with new target
-                runOptimization(newTarget);
+                // Clear the results display while running
+                document.getElementById('optimizationResults').innerHTML = '<div class="text-center"><div class="spinner-border"></div> Running optimization with ' + newTarget + ' vehicles...</div>';
+
+                // Run with new target - ensure it's passed as integer
+                runOptimization(parseInt(newTarget));
             }
         }
 
