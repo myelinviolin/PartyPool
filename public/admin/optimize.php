@@ -457,25 +457,28 @@ class CarpoolOptimizer {
 
         $routes_json = json_encode($result['routes']);
         $vehicles_used = $result['vehicles_needed'];
+        $target_vehicles = null; // Regular optimization doesn't have a target
 
         if ($check_stmt->rowCount() > 0) {
             // Update existing record
             $opt_query = "UPDATE optimization_results
                          SET routes = :routes,
                              vehicles_used = :vehicles_used,
+                             target_vehicles = :target_vehicles,
                              created_at = NOW()
                          WHERE event_id = :event_id";
         } else {
             // Insert new record
             $opt_query = "INSERT INTO optimization_results
-                         (event_id, routes, vehicles_used, created_at)
-                         VALUES (:event_id, :routes, :vehicles_used, NOW())";
+                         (event_id, routes, vehicles_used, target_vehicles, created_at)
+                         VALUES (:event_id, :routes, :vehicles_used, :target_vehicles, NOW())";
         }
 
         $opt_stmt = $this->db->prepare($opt_query);
         $opt_stmt->bindParam(':event_id', $this->event_id);
         $opt_stmt->bindParam(':routes', $routes_json);
         $opt_stmt->bindParam(':vehicles_used', $vehicles_used);
+        $opt_stmt->bindParam(':target_vehicles', $target_vehicles);
         $opt_stmt->execute();
 
         // Update event optimization status

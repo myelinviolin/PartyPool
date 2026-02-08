@@ -22,6 +22,7 @@ $event_id = isset($_GET['event_id']) ? $_GET['event_id'] : 1;
 $query = "SELECT
             or_result.routes,
             or_result.vehicles_used,
+            or_result.target_vehicles,
             or_result.created_at,
             e.optimization_status,
             e.optimization_run_at,
@@ -56,6 +57,7 @@ if ($stmt->rowCount() > 0) {
         'optimization_exists' => true,
         'routes' => $routes,
         'vehicles_needed' => $result['vehicles_used'],
+        'target_vehicles' => $result['target_vehicles'],
         'vehicles_saved' => $vehicles_saved,
         'total_participants' => $result['total_participants'],
         'total_drivers' => $result['total_drivers'],

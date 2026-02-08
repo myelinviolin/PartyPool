@@ -803,18 +803,23 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 console.log('Loaded saved optimization:', {
                     exists: data.optimization_exists,
                     vehicles_needed: data.vehicles_needed,
+                    target_vehicles: data.target_vehicles,
                     routes_count: data.routes ? data.routes.length : 0,
                     created_at: data.created_at
                 });
 
                 if (data.optimization_exists && data.routes && data.routes.length > 0) {
+                    // Store the target vehicles for rerun
+                    window.savedTargetVehicles = data.target_vehicles || data.vehicles_needed;
+
                     // Display the saved optimization results
                     displayEnhancedResults({
                         success: true,
                         total_participants: data.total_participants,
                         vehicles_needed: data.vehicles_needed,
                         vehicles_saved: data.vehicles_saved,
-                        routes: data.routes
+                        routes: data.routes,
+                        target_vehicles: data.target_vehicles
                     });
 
                     // Show the results card
@@ -898,6 +903,11 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     // Store the optimization results globally
                     currentOptimizationResults = result;
 
+                    // Store target vehicles if it was specified
+                    if (targetVehicles) {
+                        window.savedTargetVehicles = targetVehicles;
+                    }
+
                     let statusMessage = `<div class="alert alert-success mb-0 mt-2">
                         <i class="fas fa-check"></i> Optimization complete!
                         Using ${result.vehicles_needed} vehicles`;
@@ -958,11 +968,21 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         function displayEnhancedResults(assignments) {
             const resultsDiv = document.getElementById('optimizationResults');
+
+            // Show if using target vehicles or automatic optimization
+            let optimizationMode = '';
+            if (assignments.target_vehicles) {
+                optimizationMode = ` <span class="badge bg-warning">Target: ${assignments.target_vehicles} vehicles</span>`;
+            } else {
+                optimizationMode = ' <span class="badge bg-info">Automatic optimization</span>';
+            }
+
             let html = `
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
                     Optimized ${assignments.total_participants} participants into ${assignments.vehicles_needed} vehicles
                     - Saved ${assignments.vehicles_saved} ${assignments.vehicles_saved === 1 ? 'vehicle' : 'vehicles'}
+                    ${optimizationMode}
                 </div>
             `;
 
@@ -1032,6 +1052,8 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 `;
             });
 
+            // Use target_vehicles if available, otherwise use saved value or vehicles_needed
+            const targetValue = assignments.target_vehicles || window.savedTargetVehicles || assignments.vehicles_needed;
             html += `
                 <div class="card mt-3 bg-light">
                     <div class="card-body">
@@ -1041,7 +1063,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <label class="form-label">Try Different Vehicle Count:</label>
                                 <input type="number" id="newTargetVehicles" class="form-control"
                                        min="1" max="<?php echo count($drivers); ?>"
-                                       value="${assignments.vehicles_needed}">
+                                       value="${targetValue}">
                             </div>
                             <div class="col-md-6">
                                 <button class="btn btn-warning" onclick="rerunWithVehicles()">
