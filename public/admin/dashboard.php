@@ -804,9 +804,13 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                     exists: data.optimization_exists,
                     vehicles_needed: data.vehicles_needed,
                     target_vehicles: data.target_vehicles,
+                    minimum_vehicles_needed: data.minimum_vehicles_needed,
                     routes_count: data.routes ? data.routes.length : 0,
                     created_at: data.created_at
                 });
+
+                // Store the minimum vehicles needed globally
+                window.minimumVehiclesNeeded = data.minimum_vehicles_needed || 1;
 
                 if (data.optimization_exists && data.routes && data.routes.length > 0) {
                     // Store the target vehicles for rerun
@@ -941,6 +945,15 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         function rerunWithVehicles() {
             const newTarget = document.getElementById('newTargetVehicles').value;
+            const minVehicles = window.minimumVehiclesNeeded || 1;
+
+            // Validate against minimum
+            if (newTarget < minVehicles) {
+                alert(`Cannot use fewer than ${minVehicles} vehicles. This is the minimum needed to transport all participants based on vehicle capacity.`);
+                document.getElementById('newTargetVehicles').value = minVehicles;
+                return;
+            }
+
             if (newTarget && newTarget > 0) {
                 console.log('Rerunning optimization with', newTarget, 'vehicles');
 
@@ -1054,6 +1067,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Use target_vehicles if available, otherwise use saved value or vehicles_needed
             const targetValue = assignments.target_vehicles || window.savedTargetVehicles || assignments.vehicles_needed;
+            const minVehicles = window.minimumVehiclesNeeded || 1;
             html += `
                 <div class="card mt-3 bg-light">
                     <div class="card-body">
@@ -1062,8 +1076,11 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="col-md-6">
                                 <label class="form-label">Try Different Vehicle Count:</label>
                                 <input type="number" id="newTargetVehicles" class="form-control"
-                                       min="1" max="<?php echo count($drivers); ?>"
+                                       min="${minVehicles}" max="<?php echo count($drivers); ?>"
                                        value="${targetValue}">
+                                <small class="text-muted">
+                                    Minimum: ${minVehicles} vehicles (required for capacity)
+                                </small>
                             </div>
                             <div class="col-md-6">
                                 <button class="btn btn-warning" onclick="rerunWithVehicles()">

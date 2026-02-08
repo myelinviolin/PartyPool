@@ -410,20 +410,10 @@ class EnhancedCarpoolOptimizer {
                 $capacity_diff = abs($driver['vehicle_capacity'] - count($cluster));
                 $score = $distance + ($capacity_diff * 2);
 
-                // When target_vehicles is set, we must assign a driver to every cluster
-                // Remove capacity restriction if we have a target to meet
-                if ($this->target_vehicles !== null) {
-                    // Always consider the driver, even if capacity is insufficient
-                    if ($score < $best_score) {
-                        $best_driver = $driver;
-                        $best_score = $score;
-                    }
-                } else {
-                    // Original logic: only assign if driver has enough capacity
-                    if ($score < $best_score && $driver['vehicle_capacity'] >= count($cluster) - 1) {
-                        $best_driver = $driver;
-                        $best_score = $score;
-                    }
+                // Always respect vehicle capacity - but still try to use all requested vehicles
+                if ($score < $best_score) {
+                    $best_driver = $driver;
+                    $best_score = $score;
                 }
             }
 
@@ -482,12 +472,8 @@ class EnhancedCarpoolOptimizer {
                     continue;
                 }
 
-                // Skip if vehicle is full (but be more lenient if target_vehicles is set)
-                if ($this->target_vehicles === null && count($passengers) >= $best_driver['vehicle_capacity']) {
-                    // In automatic mode, respect vehicle capacity strictly
-                    break;
-                } else if ($this->target_vehicles !== null && count($passengers) >= $best_driver['vehicle_capacity'] + 2) {
-                    // In target mode, allow slight overcapacity (up to 2 extra) to ensure everyone gets assigned
+                // Always respect vehicle capacity - never exceed it
+                if (count($passengers) >= $best_driver['vehicle_capacity']) {
                     break;
                 }
 
