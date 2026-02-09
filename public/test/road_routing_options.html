@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road-Based Routing Options for Carpool System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+        .option-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .recommended {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        .option-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .price-tag {
+            background: #ffc107;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 15px 0;
+        }
+        .pros, .cons {
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .pros {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .cons {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .implementation-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .code-example {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .feature-item {
+            padding: 10px;
+            background: #e7f5ff;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .recommended-banner {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ Road-Based Routing Options for Your Carpool System</h1>
+
+        <div class="warning-box">
+            <h3 style="margin-top: 0;">📍 Current System Status</h3>
+            <p>Your system currently uses:</p>
+            <ul>
+                <li><strong>Straight-line distances</strong> (Haversine formula)</li>
+                <li><strong>Estimated travel times</strong> (distance × 2 minutes/mile approximation)</li>
+                <li><strong>Visual routes on map</strong> (straight lines between points)</li>
+            </ul>
+            <p><strong>To get actual road routing, you'll need to integrate with a routing API service.</strong></p>
+        </div>
+
+        <h2>🚀 Option 1: Google Maps Directions API</h2>
+        <div class="option-card">
+            <div class="option-header">
+                <h3 style="margin: 0;">Google Maps Platform</h3>
+                <span class="price-tag">$5-10/1000 requests</span>
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>✅ Pros</h4>
+                    <ul>
+                        <li>Most accurate routing data</li>
+                        <li>Real-time traffic information</li>
+                        <li>Actual speed limits considered</li>
+                        <li>Multiple route options</li>
+                        <li>Turn-by-turn directions</li>
+                        <li>Waypoint optimization</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>❌ Cons</h4>
+                    <ul>
+                        <li>Requires API key</li>
+                        <li>Costs money after free tier</li>
+                        <li>Usage limits</li>
+                        <li>Requires billing account</li>
+                        <li>Data cannot be cached long-term</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="implementation-box">
+                <h4>Implementation Example:</h4>
+                <div class="code-example">// PHP Backend
+$url = "https://maps.googleapis.com/maps/api/directions/json?"
+     . "origin=" . urlencode($driver_address)
+     . "&destination=" . urlencode($event_address)
+     . "&waypoints=optimize:true|" . implode('|', $passenger_addresses)
+     . "&key=YOUR_API_KEY";
+
+$response = json_decode(file_get_contents($url), true);
+$route = $response['routes'][0];
+$total_distance = $route['legs'][0]['distance']['value'] / 1609.34; // meters to miles
+$total_duration = $route['legs'][0]['duration']['value'] / 60; // seconds to minutes
+$polyline = $route['overview_polyline']['points']; // For drawing on map</div>
+            </div>
+
+            <p><strong>Free Tier:</strong> $200 credit/month (~40,000 requests)</p>
+            <p><strong>Best For:</strong> Production systems with budget for accuracy</p>
+        </div>
+
+        <h2>🚀 Option 2: Mapbox Directions API</h2>
+        <div class="option-card recommended">
+            <div class="option-header">
+                <h3 style="margin: 0;">Mapbox <span class="recommended-banner">RECOMMENDED</span></h3>
+                <span class="price-tag">$0.60/1000 requests</span>
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>✅ Pros</h4>
+                    <ul>
+                        <li>Much cheaper than Google</li>
+                        <li>Good routing quality</li>
+                        <li>100,000 free requests/month</li>
+                        <li>Includes traffic data</li>
+                        <li>Easy integration with Leaflet</li>
+                        <li>Waypoint optimization available</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>❌ Cons</h4>
+                    <ul>
+                        <li>Less accurate than Google</li>
+                        <li>Fewer route alternatives</li>
+                        <li>Traffic data less comprehensive</li>
+                        <li>Still requires API key</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="implementation-box">
+                <h4>Implementation Example:</h4>
+                <div class="code-example">// JavaScript Frontend
+const coordinates = [
+    [driver_lng, driver_lat],
+    ...passengers.map(p => [p.lng, p.lat]),
+    [event_lng, event_lat]
+].join(';');
+
+fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?` +
+      `access_token=${MAPBOX_TOKEN}&` +
+      `geometries=geojson&` +
+      `overview=full&` +
+      `steps=true`)
+    .then(response => response.json())
+    .then(data => {
+        const route = data.routes[0];
+        const distance = route.distance * 0.000621371; // meters to miles
+        const duration = route.duration / 60; // seconds to minutes
+
+        // Draw route on Leaflet map
+        L.geoJSON(route.geometry).addTo(map);
+    });</div>
+            </div>
+
+            <p><strong>Free Tier:</strong> 100,000 requests/month (covers ~3,300 optimizations)</p>
+            <p><strong>Best For:</strong> Your use case - good balance of cost and quality</p>
+        </div>
+
+        <h2>🚀 Option 3: OpenRouteService (Free/Open Source)</h2>
+        <div class="option-card">
+            <div class="option-header">
+                <h3 style="margin: 0;">OpenRouteService</h3>
+                <span class="price-tag">FREE (with limits)</span>
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>✅ Pros</h4>
+                    <ul>
+                        <li>Completely free option</li>
+                        <li>Open source</li>
+                        <li>Can self-host</li>
+                        <li>No billing required</li>
+                        <li>Decent routing quality</li>
+                        <li>Privacy-focused</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>❌ Cons</h4>
+                    <ul>
+                        <li>2,500 requests/day limit</li>
+                        <li>No real-time traffic</li>
+                        <li>Less accurate than commercial</li>
+                        <li>Slower response times</li>
+                        <li>Limited waypoints (50 max)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="implementation-box">
+                <h4>Implementation Example:</h4>
+                <div class="code-example">// PHP Backend
+$client = new GuzzleHttp\Client();
+$response = $client->post('https://api.openrouteservice.org/v2/directions/driving-car', [
+    'headers' => [
+        'Authorization' => 'YOUR_API_KEY',
+        'Content-Type' => 'application/json'
+    ],
+    'json' => [
+        'coordinates' => [
+            [$driver_lng, $driver_lat],
+            [$passenger_lng, $passenger_lat],
+            [$event_lng, $event_lat]
+        ]
+    ]
+]);
+
+$data = json_decode($response->getBody(), true);
+$route = $data['routes'][0];
+$distance_miles = $route['summary']['distance'] * 0.000621371;
+$duration_minutes = $route['summary']['duration'] / 60;</div>
+            </div>
+
+            <p><strong>Free Tier:</strong> 2,500 requests/day (~80 optimizations)</p>
+            <p><strong>Best For:</strong> Testing or low-volume events</p>
+        </div>
+
+        <h2>🚀 Option 4: OSRM (Self-Hosted)</h2>
+        <div class="option-card">
+            <div class="option-header">
+                <h3 style="margin: 0;">Open Source Routing Machine</h3>
+                <span class="price-tag">FREE (server costs only)</span>
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>✅ Pros</h4>
+                    <ul>
+                        <li>Completely free</li>
+                        <li>No API limits</li>
+                        <li>Full control</li>
+                        <li>Fast responses</li>
+                        <li>Privacy guaranteed</li>
+                        <li>Can customize routing</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>❌ Cons</h4>
+                    <ul>
+                        <li>Requires server setup</li>
+                        <li>No traffic data</li>
+                        <li>Must maintain yourself</li>
+                        <li>Needs 50GB+ storage</li>
+                        <li>Technical expertise required</li>
+                        <li>No real-time updates</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="implementation-box">
+                <h4>Server Setup:</h4>
+                <div class="code-example"># Docker setup
+docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-extract -p /opt/car.lua /data/wisconsin.osm.pbf
+docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-partition /data/wisconsin.osrm
+docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-customize /data/wisconsin.osrm
+
+# Run server
+docker run -t -i -p 5000:5000 -v "${PWD}:/data" osrm/osrm-backend osrm-routed --algorithm mld /data/wisconsin.osrm
+
+# Query your local server
+$url = "http://localhost:5000/route/v1/driving/{$coords}?overview=full&geometries=geojson";</div>
+            </div>
+
+            <p><strong>Cost:</strong> Server hosting only (~$20-50/month)</p>
+            <p><strong>Best For:</strong> High volume or privacy-critical applications</p>
+        </div>
+
+        <h2>📊 Comparison Table</h2>
+        <table class="comparison-table">
+            <tr>
+                <th>Feature</th>
+                <th>Google Maps</th>
+                <th>Mapbox ⭐</th>
+                <th>OpenRouteService</th>
+                <th>OSRM (Self-hosted)</th>
+            </tr>
+            <tr>
+                <td>Accuracy</td>
+                <td>⭐⭐⭐⭐⭐</td>
+                <td>⭐⭐⭐⭐</td>
+                <td>⭐⭐⭐</td>
+                <td>⭐⭐⭐</td>
+            </tr>
+            <tr>
+                <td>Real-time Traffic</td>
+                <td>✅ Yes</td>
+                <td>✅ Yes</td>
+                <td>❌ No</td>
+                <td>❌ No</td>
+            </tr>
+            <tr>
+                <td>Free Tier</td>
+                <td>$200/month</td>
+                <td>100k requests</td>
+                <td>2.5k/day</td>
+                <td>Unlimited</td>
+            </tr>
+            <tr>
+                <td>Cost After Free</td>
+                <td>$5-10/1000</td>
+                <td>$0.60/1000</td>
+                <td>Free</td>
+                <td>Server only</td>
+            </tr>
+            <tr>
+                <td>Setup Difficulty</td>
+                <td>Easy</td>
+                <td>Easy</td>
+                <td>Easy</td>
+                <td>Hard</td>
+            </tr>
+            <tr>
+                <td>Speed Limits</td>
+                <td>✅ Actual</td>
+                <td>✅ Estimated</td>
+                <td>✅ OSM data</td>
+                <td>✅ OSM data</td>
+            </tr>
+        </table>
+
+        <h2>🔧 Implementation Steps (Mapbox Recommended)</h2>
+        <div class="implementation-box">
+            <ol style="font-size: 1.05em; line-height: 1.8;">
+                <li><strong>Sign up for Mapbox:</strong> Create free account at mapbox.com</li>
+                <li><strong>Get API Token:</strong> Copy your public access token</li>
+                <li><strong>Update optimize_enhanced.php:</strong>
+                    <ul>
+                        <li>Add function to call Mapbox API for each route</li>
+                        <li>Replace straight-line calculations with API responses</li>
+                        <li>Store route polylines for map display</li>
+                    </ul>
+                </li>
+                <li><strong>Update map display:</strong>
+                    <ul>
+                        <li>Replace straight lines with route polylines</li>
+                        <li>Use Leaflet Routing Machine or decode polylines</li>
+                    </ul>
+                </li>
+                <li><strong>Cache results:</strong>
+                    <ul>
+                        <li>Store calculated routes in database</li>
+                        <li>Reduce API calls for same addresses</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <h2>🎯 My Recommendation for Your System</h2>
+        <div class="option-card recommended">
+            <h3 style="color: #28a745;">Go with Mapbox Directions API</h3>
+            <p style="font-size: 1.05em;">Here's why it's perfect for your use case:</p>
+            <ul style="font-size: 1.05em; line-height: 1.8;">
+                <li>✅ <strong>100,000 free requests/month</strong> - Covers ~3,300 route calculations</li>
+                <li>✅ <strong>Only $0.60 per 1000 after that</strong> - Very affordable</li>
+                <li>✅ <strong>Works great with Leaflet</strong> - Your current map library</li>
+                <li>✅ <strong>Includes traffic data</strong> - More accurate arrival times</li>
+                <li>✅ <strong>Easy integration</strong> - Can be added in a few hours</li>
+                <li>✅ <strong>Waypoint optimization</strong> - Can optimize pickup order</li>
+            </ul>
+
+            <div class="warning-box">
+                <h4>💡 Smart Implementation Tip:</h4>
+                <p>Only call the routing API when finalizing assignments, not during optimization iterations. This keeps API costs minimal while still providing accurate final routes.</p>
+            </div>
+        </div>
+
+        <h2>💰 Cost Estimation for Your System</h2>
+        <div class="implementation-box">
+            <h4>Assuming typical usage:</h4>
+            <ul>
+                <li>11 participants per event</li>
+                <li>5 routes calculated per optimization</li>
+                <li>Run optimization 3 times (testing different vehicle counts)</li>
+                <li>= 15 API calls per event</li>
+            </ul>
+            <p><strong>With Mapbox:</strong> You could run 6,666 events per month for FREE!</p>
+            <p><strong>Even if you exceed:</strong> 10,000 extra API calls = $6</p>
+        </div>
+
+        <div style="background: #d4edda; border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin-top: 30px;">
+            <h3 style="margin-top: 0;">✅ Next Steps</h3>
+            <ol style="font-size: 1.05em; line-height: 1.8;">
+                <li>Sign up for a Mapbox account (free)</li>
+                <li>Test the API with a simple PHP script</li>
+                <li>Integrate into your optimization algorithm</li>
+                <li>Update the map display to show real routes</li>
+                <li>Add caching to minimize API calls</li>
+            </ol>
+            <p style="margin-top: 15px;"><strong>Need help implementing?</strong> I can guide you through adding Mapbox routing to your existing system!</p>
+        </div>
+    </div>
+</body>
+</html>

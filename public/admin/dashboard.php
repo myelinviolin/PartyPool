@@ -51,6 +51,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
     <style>
         @keyframes slideDown {
             from {
@@ -116,6 +117,14 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             height: 100%;
         }
         .participant-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .participant-card .btn-danger {
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            padding: 0.25rem 0.5rem;
+        }
+        .participant-card:hover .btn-danger {
+            opacity: 1;
+        }
         .participant-card .card-body {
             display: flex;
             flex-direction: column;
@@ -136,7 +145,15 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             margin-bottom: 15px;
             border: 2px solid transparent;
         }
-        .route-badge { background: #667eea; color: white; padding: 2px 8px; border-radius: 12px; margin: 0 2px; }
+        .route-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 0 2px;
+            display: inline-block;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -256,7 +273,12 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                      data-user-id="<?php echo $user['id']; ?>"
                                      data-user-name="<?php echo htmlspecialchars($user['name']); ?>"
                                      data-can-drive="<?php echo $user['willing_to_drive'] ? 'true' : 'false'; ?>">
-                                    <div class="card-body p-2">
+                                    <div class="card-body p-2 position-relative">
+                                        <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                                                onclick="removeParticipant(<?php echo $user['id']; ?>, '<?php echo addslashes(htmlspecialchars($user['name'])); ?>')"
+                                                title="Remove participant">
+                                            <i class="fas fa-times"></i>
+                                        </button>
                                         <div class="mb-1">
                                             <strong><?php echo htmlspecialchars($user['name']); ?></strong>
                                             <?php if ($user['willing_to_drive']): ?>
@@ -303,6 +325,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/map-utils.js"></script>
+    <script src="/js/shared-map-display.js"></script>
     <script>
         // Global error handler for debugging
         window.onerror = function(msg, url, line, col, error) {
@@ -313,6 +336,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         // IMPORTANT: Define these in global scope immediately
         var map;
         var markers = [];
+        var routeMarkers = []; // Track route markers separately
         var originalEventData = {};
         var currentOptimizationResults = null; // Store optimization results for itinerary
 
@@ -417,10 +441,12 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             if (eventMarker) {
                 eventMarker.addTo(map);
                 allMarkers.push(eventMarker);
+                SharedMapDisplay.addParticipantMarker('event', eventMarker);
             }
             <?php endif; ?>
 
             // Add user markers using shared functions
+            SharedMapDisplay.clearParticipantMarkers(); // Clear/initialize participant markers
             <?php foreach ($users as $user): ?>
                 <?php if ($user['lat'] && $user['lng']): ?>
                 <?php if ($user['willing_to_drive']): ?>
@@ -443,6 +469,7 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                 if (marker_<?php echo $user['id']; ?>) {
                     marker_<?php echo $user['id']; ?>.addTo(map);
                     allMarkers.push(marker_<?php echo $user['id']; ?>);
+                    SharedMapDisplay.addParticipantMarker(<?php echo $user['id']; ?>, marker_<?php echo $user['id']; ?>);
                 }
                 <?php endif; ?>
             <?php endforeach; ?>
@@ -1027,20 +1054,36 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         function displayEnhancedResults(assignments) {
             const resultsDiv = document.getElementById('optimizationResults');
 
-            // Show if using target vehicles or automatic optimization
-            let optimizationMode = '';
-            if (assignments.target_vehicles) {
-                optimizationMode = ` <span class="badge bg-warning">Target: ${assignments.target_vehicles} vehicles</span>`;
-            } else {
-                optimizationMode = ' <span class="badge bg-info">Automatic optimization</span>';
-            }
+            // Calculate total miles saved
+            let totalMilesSaved = 0;
+            assignments.routes.forEach(route => {
+                // Driver's miles difference (negative if driving more)
+                const driverDirectDistance = parseFloat(route.direct_distance) || 0;
+                const driverActualDistance = parseFloat(route.total_distance) || 0;
+                const driverMilesDiff = driverDirectDistance - driverActualDistance;
+                totalMilesSaved += driverMilesDiff;
+
+                // Passengers save all their miles
+                if (route.passengers && route.passengers.length > 0) {
+                    route.passengers.forEach(passenger => {
+                        // Use passenger's direct distance if available, otherwise use driver's as estimate
+                        const passengerDirectDistance = parseFloat(passenger.direct_distance) || driverDirectDistance;
+                        totalMilesSaved += passengerDirectDistance;
+                    });
+                }
+            });
+
+            const milesSavedText = totalMilesSaved >= 0 ?
+                `<strong>${totalMilesSaved.toFixed(1)} vehicle miles saved</strong> through carpooling` :
+                `Added ${Math.abs(totalMilesSaved).toFixed(1)} total miles for pickup detours`;
+            const gasPumpClass = totalMilesSaved >= 0 ? 'text-success' : 'text-warning';
 
             let html = `
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
                     Optimized ${assignments.total_participants} participants into ${assignments.vehicles_needed} vehicles
-                    - Saved ${assignments.vehicles_saved} ${assignments.vehicles_saved === 1 ? 'vehicle' : 'vehicles'}
-                    ${optimizationMode}
+                    - Saved ${assignments.vehicles_saved} ${assignments.vehicles_saved === 1 ? 'vehicle' : 'vehicles'}<br>
+                    <i class="fas fa-gas-pump ${gasPumpClass}"></i> ${milesSavedText}
                 </div>
             `;
 
@@ -1077,13 +1120,23 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="row mt-2">
                             <div class="col-md-8">
                                 ${route.departure_time ? `<div><strong>Departure:</strong> ${route.departure_time}</div>` : ''}
-                                <div>
-                                    <strong>Route:</strong>
-                                    ${hasPassengers ?
-                                        route.passengers.map(p => `<span class="route-badge">${p.name}</span>`).join(' → ') :
-                                        '<span class="text-muted">Drive directly to destination</span>'
-                                    }
-                                </div>
+                                ${hasPassengers ? `
+                                    <div>
+                                        <strong>Route (Pickup Order):</strong>
+                                        <ol class="mb-0 mt-1" style="padding-left: 1.5rem;">
+                                            ${route.passengers.map(p => `
+                                                <li style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    <span class="route-badge">${p.name}</span>
+                                                </li>
+                                            `).join('')}
+                                        </ol>
+                                    </div>
+                                ` : `
+                                    <div>
+                                        <strong>Route:</strong>
+                                        <span class="text-muted">Drive directly to destination</span>
+                                    </div>
+                                `}
                             </div>
                             <div class="col-md-4">
                                 ${hasPassengers ? `
@@ -1101,9 +1154,11 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <i class="fas fa-clock"></i> Travel time: ${route.direct_time || '0'}
                                     </small>
                                 `}
-                                <small class="d-block">
-                                    <i class="fas fa-user-friends"></i> ${route.passengers.length} / ${route.capacity} passengers
-                                </small>
+                                ${hasPassengers ? `
+                                    <small class="d-block">
+                                        <i class="fas fa-user-friends"></i> ${route.passengers.length} / ${route.capacity} passengers
+                                    </small>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -1151,89 +1206,124 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             displayEnhancedResults(assignments);
         }
 
+        // Store route lines globally for interaction
+        let routeLines = [];
+        let selectedRouteIndex = null;
+        let participantMarkers = {}; // Store references to all participant markers by ID
+
         function drawRoutes(assignments) {
-            // Clear existing route lines
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
+            // Use the shared display function for consistent map display with home page
+            SharedMapDisplay.displayRoutesOnMap(assignments.routes, map);
 
-            // Clear any existing route lines
-            if (window.routeLines) {
-                window.routeLines.forEach(line => map.removeLayer(line));
-            }
-            window.routeLines = [];
-
-            // Draw routes for each vehicle
-            // Add a route legend container
-            const legendHtml = ['<div class="route-legend bg-white p-2 rounded shadow-sm" style="position: absolute; top: 10px; right: 10px; z-index: 1000; max-height: 300px; overflow-y: auto;">'];
-            legendHtml.push('<h6 class="mb-2 text-center fw-bold">Carpool Routes</h6>');
-
-            assignments.routes.forEach((route, index) => {
-                if (route.coordinates && route.coordinates.length > 1) {
-                    const color = getRouteColor(index);
-
-                    // Draw main route line with shadow effect for visibility
-                    // First draw a wider white line as background
-                    const shadowLine = L.polyline(route.coordinates, {
-                        color: '#FFFFFF',
-                        weight: 7,
-                        opacity: 0.8
-                    }).addTo(map);
-                    markers.push(shadowLine);
-
-                    // Then draw the colored route on top
-                    const polyline = L.polyline(route.coordinates, {
-                        color: color,
-                        weight: 5,
-                        opacity: 0.9,
-                        smoothFactor: 1,
-                        dashArray: route.has_passengers ? null : '10, 10' // Dashed line for solo drivers
-                    }).addTo(map);
-                    markers.push(polyline);
-                    window.routeLines.push(polyline);
-
-                    // Add route to legend
-                    const driverName = route.driver_name.replace(/Driver \d+ - /, '');
-                    const passengerCount = route.passengers ? route.passengers.length : 0;
-                    const routeType = passengerCount === 0 ? '(Solo)' : `(${passengerCount} passengers)`;
-                    legendHtml.push(`
-                        <div class="d-flex align-items-center mb-1">
-                            <div style="width: 30px; height: 3px; background-color: ${color}; margin-right: 8px; ${route.has_passengers ? '' : 'background-image: repeating-linear-gradient(90deg, transparent, transparent 5px, white 5px, white 10px);'}"></div>
-                            <small>${driverName} ${routeType}</small>
-                        </div>
-                    `);
-                }
-            });
-
-            // Complete and add legend to map
-            legendHtml.push('</div>');
-            const legendContainer = L.control({position: 'topright'});
-            legendContainer.onAdd = function() {
-                const div = L.DomUtil.create('div', '');
-                div.innerHTML = legendHtml.join('');
-                return div;
-            };
-            legendContainer.addTo(map);
-            markers.push(legendContainer);
+            // Sync our local variables with the shared module
+            routeLines = window.routeLines;
+            selectedRouteIndex = window.selectedRouteIndex;
+            participantMarkers = window.participantMarkers;
         }
 
-        // High contrast colors for route visibility
-        const routeColors = [
-            '#FF0000', // Bright Red
-            '#0066FF', // Bright Blue
-            '#00CC00', // Bright Green
-            '#FF6600', // Orange
-            '#9900FF', // Purple
-            '#FF0099', // Magenta
-            '#00CCCC', // Cyan
-            '#FFCC00', // Gold
-            '#663300', // Brown
-            '#FF66CC', // Pink
-            '#0099CC', // Teal
-            '#99CC00'  // Lime
-        ];
+        // Wrapper function to call shared module for route selector
+        function createRouteSelector() {
+            SharedMapDisplay.createRouteSelector(map);
+        }
 
-        function getRouteColor(index) {
-            return routeColors[index % routeColors.length];
+        // Toggle route visibility - wrapper to call shared module
+        function toggleRoute(index) {
+            SharedMapDisplay.toggleRoute(index);
+            // Sync our local variables with the shared module
+            selectedRouteIndex = window.selectedRouteIndex;
+        }
+
+        // Show all participant markers - wrapper to call shared module
+        function showAllParticipants() {
+            SharedMapDisplay.showAllParticipants();
+        }
+
+        // Show all routes - wrapper to call shared module
+        function showAllRoutes() {
+            SharedMapDisplay.showAllRoutes();
+        }
+
+        // Route colors are now handled by SharedMapDisplay module
+
+        // Remove participant function
+        async function removeParticipant(userId, userName) {
+            // Show confirmation dialog
+            if (!confirm(`Are you sure you want to remove ${userName} from the event?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('remove_participant.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        user_id: userId,
+                        event_id: <?php echo $event_id; ?>
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Show success message
+                    const successAlert = document.createElement('div');
+                    successAlert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3 shadow-lg';
+                    successAlert.style.zIndex = '9999';
+                    successAlert.style.minWidth = '400px';
+                    successAlert.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x me-3"></i>
+                            <div>
+                                <strong>Participant Removed</strong><br>
+                                <small>${userName} has been removed from the event.</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(successAlert);
+
+                    // Auto-dismiss after 3 seconds
+                    setTimeout(() => {
+                        successAlert.classList.remove('show');
+                        setTimeout(() => successAlert.remove(), 150);
+                    }, 3000);
+
+                    // Remove the participant card from the UI
+                    const participantCard = document.querySelector(`[data-user-id="${userId}"]`);
+                    if (participantCard && participantCard.parentElement) {
+                        participantCard.parentElement.style.transition = 'opacity 0.3s';
+                        participantCard.parentElement.style.opacity = '0';
+                        setTimeout(() => {
+                            participantCard.parentElement.remove();
+                        }, 300);
+                    }
+
+                    // Remove participant marker from map if exists
+                    if (participantMarkers[userId]) {
+                        map.removeLayer(participantMarkers[userId]);
+                        delete participantMarkers[userId];
+                    }
+
+                    // Clear optimization results since they're now outdated
+                    const resultsCard = document.getElementById('resultsCard');
+                    if (resultsCard) {
+                        resultsCard.style.display = 'none';
+                    }
+
+                    // Update optimization status
+                    const statusDiv = document.getElementById('optimizationStatus');
+                    if (statusDiv) {
+                        statusDiv.innerHTML = '<div class="text-warning"><i class="fas fa-exclamation-triangle"></i> Optimization needs to be re-run</div>';
+                    }
+                } else {
+                    // Show error message
+                    alert('Error removing participant: ' + (result.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error removing participant:', error);
+                alert('Error removing participant: ' + error.message);
+            }
         }
 
         async function saveAssignments() {

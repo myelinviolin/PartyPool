@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified Route Selector</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 15px;
+        }
+        .changes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .before, .after {
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .before {
+            background: #ffe5e5;
+            border: 2px solid #ff9999;
+        }
+        .after {
+            background: #e5ffe5;
+            border: 2px solid #99ff99;
+        }
+        h3 {
+            margin-top: 0;
+        }
+        .mockup {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .route-item-old {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .route-item-new {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .route-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .route-line {
+            width: 30px;
+            height: 4px;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+        .driver-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .route-type {
+            font-size: 10px;
+            color: #6c757d;
+            margin-left: 5px;
+        }
+        .feature-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .feature-list li {
+            margin: 10px 0;
+        }
+        .removed {
+            color: red;
+            text-decoration: line-through;
+        }
+        .kept {
+            color: green;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Simplified Route Selector</h1>
+
+        <p>The route selector has been simplified to show only the essential information:</p>
+
+        <div class="changes">
+            <div class="before">
+                <h3>❌ Before (Cluttered)</h3>
+                <div class="mockup">
+                    <div class="route-item-old">
+                        <span class="route-number" style="background: #FF0000;">1</span>
+                        <span class="route-line" style="background: #FF0000;"></span>
+                        <div>
+                            <div class="driver-name">Sarah Johnson</div>
+                            <div class="route-type">Solo</div>
+                        </div>
+                    </div>
+                    <div class="route-item-old">
+                        <span class="route-number" style="background: #0066FF;">2</span>
+                        <span class="route-line" style="background: #0066FF; border: 2px dashed #0066FF; background: white;"></span>
+                        <div>
+                            <div class="driver-name">Michael Chen</div>
+                            <div class="route-type">2 pax</div>
+                        </div>
+                    </div>
+                </div>
+                <p>Elements:</p>
+                <ul>
+                    <li class="removed">Colored number circle</li>
+                    <li class="removed">Route line preview</li>
+                    <li class="removed">Driver name</li>
+                    <li class="removed">Passenger count (Solo, 2 pax)</li>
+                </ul>
+            </div>
+
+            <div class="after">
+                <h3>✅ After (Clean)</h3>
+                <div class="mockup">
+                    <div class="route-item-new">
+                        <span class="route-number" style="background: #FF0000;">1</span>
+                        <span class="driver-name">Sarah Johnson</span>
+                    </div>
+                    <div class="route-item-new">
+                        <span class="route-number" style="background: #0066FF;">2</span>
+                        <span class="driver-name">Michael Chen</span>
+                    </div>
+                </div>
+                <p>Elements:</p>
+                <ul>
+                    <li class="kept">✓ Colored number circle</li>
+                    <li class="removed">✗ Route line preview</li>
+                    <li class="kept">✓ Driver name</li>
+                    <li class="removed">✗ Passenger count</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="feature-list">
+            <h3>What Changed:</h3>
+            <ul>
+                <li><strong>Removed route line preview</strong> - The colored line next to the number was redundant</li>
+                <li><strong>Removed passenger labels</strong> - "Solo" and "2 pax" labels were unnecessary clutter</li>
+                <li><strong>Kept colored numbers</strong> - Still shows route colors for visual distinction</li>
+                <li><strong>Kept driver names</strong> - Essential information for identifying routes</li>
+                <li><strong>Cleaner layout</strong> - More space, easier to read</li>
+            </ul>
+        </div>
+
+        <h2>Code Changes</h2>
+
+        <h3>JavaScript (app.js and dashboard.php)</h3>
+        <div class="code-block">// BEFORE
+html += `
+    &lt;div class="route-selector-item" data-route-index="${index}"&gt;
+        &lt;span class="route-number" style="background-color: ${route.color};"&gt;${routeNum}&lt;/span&gt;
+        &lt;span class="route-line" style="background-color: ${route.color};"&gt;&lt;/span&gt;
+        &lt;span class="route-info"&gt;
+            &lt;span class="driver-name"&gt;${route.driverName}&lt;/span&gt;
+            &lt;span class="route-type"&gt;${routeType}&lt;/span&gt;
+        &lt;/span&gt;
+    &lt;/div&gt;
+`;
+
+// AFTER
+html += `
+    &lt;div class="route-selector-item" data-route-index="${index}"&gt;
+        &lt;span class="route-number" style="background-color: ${route.color};"&gt;${routeNum}&lt;/span&gt;
+        &lt;span class="driver-name"&gt;${route.driverName}&lt;/span&gt;
+    &lt;/div&gt;
+`;</div>
+
+        <h3>CSS (style.css)</h3>
+        <div class="code-block">/* Removed these styles: */
+.route-line { /* REMOVED */ }
+.route-info { /* REMOVED */ }
+.route-type { /* REMOVED */ }
+
+/* Updated driver-name to work as direct child: */
+.driver-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #212529;
+    flex-grow: 1;  /* Takes remaining space */
+}</div>
+
+        <div class="feature-list" style="background: #e7f3ff;">
+            <h3>✅ Result:</h3>
+            <p>The route selector is now cleaner and more focused, showing only the essential information needed to identify and select routes. The colored numbers provide visual distinction while the driver names identify each route. All interactive functionality remains unchanged.</p>
+        </div>
+
+        <div style="text-align: center; padding: 20px; color: #666;">
+            <p><strong>Implementation Complete</strong><br>
+            Both the home page and admin dashboard have been updated with the simplified route selector.</p>
+        </div>
+    </div>
+</body>
+</html>

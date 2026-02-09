@@ -4,6 +4,12 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
+// Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 include_once '../config/database.php';
 
 $database = new Database();
@@ -16,7 +22,8 @@ if (!$db) {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
-$data = json_decode(file_get_contents("php://input"), true);
+$input = file_get_contents("php://input");
+$data = json_decode($input, true);
 
 switch($method) {
     case 'POST':
@@ -48,7 +55,9 @@ switch($method) {
             $stmt->bindParam(':vehicle_make', $data['vehicle_make']);
             $stmt->bindParam(':vehicle_model', $data['vehicle_model']);
             $stmt->bindParam(':vehicle_color', $data['vehicle_color']);
-            $stmt->bindParam(':departure_time', $data['departure_time']);
+            // departure_time is not provided in the form, set to null
+            $null = null;
+            $stmt->bindParam(':departure_time', $null);
         } else {
             $null = null;
             $stmt->bindParam(':vehicle_capacity', $null);

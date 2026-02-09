@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Selector Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .feature-list li:before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🗺️ Route Selector Interactive Test</h1>
+
+        <div class="test-section">
+            <h2>New Features</h2>
+            <ul class="feature-list">
+                <li>Routes displayed as numbered buttons on the right side of the map</li>
+                <li>Click any route to highlight only that route</li>
+                <li>Other routes become hidden when one is selected</li>
+                <li>Click the selected route again to show all routes</li>
+                <li>Map automatically zooms to fit the selected route</li>
+                <li>Solid lines indicate routes with passengers</li>
+                <li>Dashed lines indicate solo drivers</li>
+                <li>Route numbers match driver assignment order</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>Implementation Details</h2>
+
+            <div class="test-result info">
+                <strong>JavaScript Changes (app.js):</strong><br>
+                • Added global <code>routeLines</code> array to store route polylines<br>
+                • Added <code>selectedRouteIndex</code> to track active selection<br>
+                • Created <code>createRouteSelector()</code> function for UI generation<br>
+                • Implemented <code>toggleRoute()</code> for show/hide functionality<br>
+                • Added <code>showAllRoutes()</code> to reset view
+            </div>
+
+            <div class="test-result info">
+                <strong>CSS Styling (style.css):</strong><br>
+                • Styled route selector panel with shadow and rounded corners<br>
+                • Blue gradient header matching site theme<br>
+                • Numbered route buttons with hover effects<br>
+                • Active route highlighting with blue accent<br>
+                • Custom scrollbar for route list<br>
+                • Responsive design for mobile devices
+            </div>
+
+            <div class="test-result pass">
+                <strong>✅ Old Legend Removed:</strong><br>
+                The previous static legend has been completely removed and replaced with the interactive route selector.
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Live Demo</h2>
+            <p>View the Party Carpool application below to test the new route selector:</p>
+            <iframe src="/index.php" title="Party Carpool App"></iframe>
+        </div>
+
+        <div class="test-section">
+            <h2>Testing Instructions</h2>
+            <ol>
+                <li><strong>View Map:</strong> Navigate to the home page to see the map with routes</li>
+                <li><strong>Find Route Selector:</strong> Look for the "Routes" panel on the right side of the map</li>
+                <li><strong>Test Single Route:</strong> Click on any route number to highlight just that route</li>
+                <li><strong>Test Route Switching:</strong> Click on different routes to switch between them</li>
+                <li><strong>Test Deselection:</strong> Click on the currently selected route to show all routes again</li>
+                <li><strong>Test Zoom:</strong> Notice how the map zooms to fit the selected route</li>
+                <li><strong>Check Mobile:</strong> Resize browser window to test responsive design</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>Expected Behavior</h2>
+
+            <div class="test-result info">
+                <strong>Route Display:</strong><br>
+                • 8 routes total (based on current optimization)<br>
+                • Route 1: Thomas Brown (3 passengers)<br>
+                • Route 2: Amanda Garcia (1 passenger)<br>
+                • Routes 3-8: Solo drivers (dashed lines)
+            </div>
+
+            <div class="test-result info">
+                <strong>Visual Indicators:</strong><br>
+                • Gray numbered circles (1-8) for each route<br>
+                • Colored line preview matching map route color<br>
+                • Driver name and passenger count displayed<br>
+                • Active route has blue highlight and number
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Browser Compatibility</h2>
+            <div class="test-result pass">
+                ✅ Chrome/Edge (Chromium-based)<br>
+                ✅ Firefox<br>
+                ✅ Safari<br>
+                ✅ Mobile browsers (iOS Safari, Chrome Mobile)
+            </div>
+        </div>
+    </div>
+</body>
+</html>

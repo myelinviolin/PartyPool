@@ -21,6 +21,7 @@ error_reporting(E_ERROR | E_PARSE);
 ini_set('display_errors', 0);
 
 include_once '../config/database.php';
+include_once 'pre_optimize_checks.php';
 
 class EnhancedCarpoolOptimizer {
     private $db;
@@ -41,6 +42,13 @@ class EnhancedCarpoolOptimizer {
     }
 
     public function optimize() {
+        // Run pre-optimization checks
+        $checker = new PreOptimizeChecks();
+        if (!$checker->runChecks()) {
+            $errors = $checker->getErrors();
+            throw new Exception("Pre-optimization checks failed: " . implode(', ', $errors));
+        }
+
         // Load event data
         $this->loadEventData();
 
@@ -409,13 +417,25 @@ class EnhancedCarpoolOptimizer {
                     for ($i = 0; $i < count($assignments); $i++) {
                         $current_passengers = isset($assignments[$i]['passengers']) ? count($assignments[$i]['passengers']) : 0;
                         if ($current_passengers < $assignments[$i]['capacity']) {
+                            // Calculate passenger's direct distance to event
+                            $participant_direct_distance = 0;
+                            if ($participant['lat'] && $participant['lng']) {
+                                $participant_direct_distance = $this->calculateDistance(
+                                    $participant['lat'],
+                                    $participant['lng'],
+                                    $this->event['event_lat'],
+                                    $this->event['event_lng']
+                                );
+                            }
+
                             // Add to this route
                             $assignments[$i]['passengers'][] = [
                                 'id' => $participant['id'],
                                 'name' => $participant['name'],
                                 'address' => $participant['address'] ?? '',
                                 'lat' => $participant['lat'],
-                                'lng' => $participant['lng']
+                                'lng' => $participant['lng'],
+                                'direct_distance' => round($participant_direct_distance, 2)
                             ];
                             $added = true;
                             break;
@@ -592,12 +612,24 @@ class EnhancedCarpoolOptimizer {
 
             // Assign to best driver if found
             if ($best_assignment_index >= 0) {
+                // Calculate passenger's direct distance to event
+                $passenger_direct_distance = 0;
+                if ($passenger['lat'] && $passenger['lng']) {
+                    $passenger_direct_distance = $this->calculateDistance(
+                        $passenger['lat'],
+                        $passenger['lng'],
+                        $this->event['event_lat'],
+                        $this->event['event_lng']
+                    );
+                }
+
                 $assignments[$best_assignment_index]['passengers'][] = [
                     'id' => $passenger['id'],
                     'name' => $passenger['name'],
                     'address' => $passenger['address'] ?? '',
                     'lat' => $passenger['lat'],
-                    'lng' => $passenger['lng']
+                    'lng' => $passenger['lng'],
+                    'direct_distance' => round($passenger_direct_distance, 2)
                 ];
                 $assignments[$best_assignment_index]['has_passengers'] = true;
             }
@@ -616,6 +648,19 @@ class EnhancedCarpoolOptimizer {
                     }
                 }
 
+                // Optimize passenger pickup order using 2-opt algorithm
+                if ($driver_data && count($assignments[$i]['passengers']) > 1) {
+                    $driver_location = ['lat' => $driver_data['lat'], 'lng' => $driver_data['lng']];
+                    $event_location = ['lat' => $this->event['event_lat'], 'lng' => $this->event['event_lng']];
+
+                    // Optimize the pickup order to minimize travel distance
+                    $assignments[$i]['passengers'] = $this->optimizePickupOrder(
+                        $driver_location,
+                        $assignments[$i]['passengers'],
+                        $event_location
+                    );
+                }
+
                 $total_distance = 0;
                 $coordinates = [];
 
@@ -625,12 +670,29 @@ class EnhancedCarpoolOptimizer {
                     $last_lat = $driver_data['lat'];
                     $last_lng = $driver_data['lng'];
 
-                    // Add passenger pickups
-                    foreach ($assignments[$i]['passengers'] as $p) {
+                    // Track cumulative time for pickup times
+                    $cumulative_time = 0;
+
+                    // Add passenger pickups with individual pickup times
+                    for ($j = 0; $j < count($assignments[$i]['passengers']); $j++) {
+                        $p = &$assignments[$i]['passengers'][$j];
                         if ($p['lat'] && $p['lng']) {
                             $distance = $this->calculateDistance($last_lat, $last_lng, $p['lat'], $p['lng']);
                             $total_distance += $distance;
                             $coordinates[] = [(float)$p['lat'], (float)$p['lng']];
+
+                            // Calculate pickup time for this passenger
+                            $segment_time = $this->calculateTravelTime($distance);
+                            $cumulative_time += $segment_time;
+
+                            // Format pickup time relative to event time
+                            $event_timestamp = strtotime($this->event['event_date'] . ' ' . $this->event['event_time']);
+                            $pickup_timestamp = $event_timestamp - ((count($assignments[$i]['passengers']) - $j) * 3 * 60); // Account for remaining pickups
+                            $pickup_timestamp -= $this->calculateTravelTime(
+                                $this->calculateDistance($p['lat'], $p['lng'], $this->event['event_lat'], $this->event['event_lng'])
+                            ) * 60;
+                            $p['pickup_time'] = date('g:i A', $pickup_timestamp);
+
                             $last_lat = $p['lat'];
                             $last_lng = $p['lng'];
                         }
@@ -643,7 +705,27 @@ class EnhancedCarpoolOptimizer {
 
                     $assignments[$i]['total_distance'] = round($total_distance, 2);
                     $assignments[$i]['coordinates'] = $coordinates;
-                    $assignments[$i]['overhead_time'] = round(($total_distance - $assignments[$i]['direct_distance']) * 2);
+
+                    // Calculate travel time with 3-minute pickup stops
+                    $travel_time = $this->calculateTravelTime($total_distance);
+                    $num_passengers = count($assignments[$i]['passengers']);
+                    $pickup_time = $num_passengers * 3; // 3 minutes per passenger pickup
+                    $total_travel_time = $travel_time + $pickup_time;
+
+                    // Update travel times
+                    $direct_time = $this->calculateTravelTime($assignments[$i]['direct_distance']);
+                    $overhead_time = $total_travel_time - $direct_time;
+                    $overhead_percentage = $direct_time > 0 ? round(($overhead_time / $direct_time) * 100) : 0;
+
+                    $assignments[$i]['estimated_travel_time'] = round($total_travel_time) . ' minutes';
+                    $assignments[$i]['overhead_time'] = round($overhead_time) . ' minutes';
+                    $assignments[$i]['overhead_percentage'] = $overhead_percentage . '%';
+                    $assignments[$i]['direct_time'] = round($direct_time) . ' minutes';
+
+                    // Update departure time based on new travel time
+                    $event_timestamp = strtotime($this->event['event_date'] . ' ' . $this->event['event_time']);
+                    $departure_timestamp = $event_timestamp - ($total_travel_time * 60) - 600; // Add 10 min buffer
+                    $assignments[$i]['departure_time'] = date('g:i A', $departure_timestamp);
                 }
             }
         }
@@ -871,6 +953,31 @@ class EnhancedCarpoolOptimizer {
                 }
             }
 
+            // Optimize pickup order using 2-opt algorithm
+            if (count($passengers) > 1) {
+                $driver_location = ['lat' => $best_driver['lat'], 'lng' => $best_driver['lng']];
+                $event_location = ['lat' => $this->event['event_lat'], 'lng' => $this->event['event_lng']];
+                $optimized_order = $this->optimizePickupOrder($driver_location, $passengers, $event_location);
+
+                // Reorder passengers based on optimized order
+                $optimized_passengers = [];
+                foreach ($optimized_order as $index) {
+                    $optimized_passengers[] = $passengers[$index];
+                }
+                $passengers = $optimized_passengers;
+
+                // Rebuild coordinates with optimized order
+                $coordinates = [];
+                if ($best_driver['lat'] && $best_driver['lng']) {
+                    $coordinates[] = [(float)$best_driver['lat'], (float)$best_driver['lng']];
+                }
+                foreach ($passengers as $passenger) {
+                    if ($passenger['lat'] && $passenger['lng']) {
+                        $coordinates[] = [(float)$passenger['lat'], (float)$passenger['lng']];
+                    }
+                }
+            }
+
             // Add event location as final destination
             if ($this->event['event_lat'] && $this->event['event_lng']) {
                 $coordinates[] = [(float)$this->event['event_lat'], (float)$this->event['event_lng']];
@@ -1007,12 +1114,24 @@ class EnhancedCarpoolOptimizer {
                             $assignments[$i]['passengers'] = [];
                         }
 
+                        // Calculate passenger's direct distance to event
+                        $participant_direct_distance = 0;
+                        if ($participant['lat'] && $participant['lng']) {
+                            $participant_direct_distance = $this->calculateDistance(
+                                $participant['lat'],
+                                $participant['lng'],
+                                $this->event['event_lat'],
+                                $this->event['event_lng']
+                            );
+                        }
+
                         $assignments[$i]['passengers'][] = [
                             'id' => $participant['id'],
                             'name' => $participant['name'],
                             'address' => $participant['address'],
                             'lat' => $participant['lat'],
-                            'lng' => $participant['lng']
+                            'lng' => $participant['lng'],
+                            'direct_distance' => round($participant_direct_distance, 2)
                         ];
 
                         $assigned = true;
@@ -1100,6 +1219,117 @@ class EnhancedCarpoolOptimizer {
         $avg_speed = 30;
         $travel_minutes = ($distance_miles / $avg_speed) * 60;
         return $travel_minutes;
+    }
+
+    /**
+     * Optimize pickup order using 2-opt algorithm
+     * This reduces total travel distance by eliminating route crossings
+     */
+    private function optimizePickupOrder($driver_location, $passengers, $event_location) {
+        // If no passengers or only one, no optimization needed
+        if (count($passengers) <= 1) {
+            return $passengers;
+        }
+
+        // Build complete route: driver -> passengers -> event
+        $locations = [];
+        $locations[] = $driver_location; // Start point
+
+        // Add all passenger locations
+        foreach ($passengers as $index => $passenger) {
+            $locations[] = [
+                'lat' => $passenger['lat'],
+                'lng' => $passenger['lng'],
+                'index' => $index,
+                'data' => $passenger
+            ];
+        }
+
+        $locations[] = $event_location; // End point
+
+        // Calculate initial total distance
+        $best_distance = $this->calculateRouteDistance($locations);
+        $best_order = $passengers;
+        $improved = true;
+
+        // Keep optimizing until no improvement found
+        while ($improved) {
+            $improved = false;
+
+            // Try all possible 2-opt swaps (only swap passengers, not start/end)
+            for ($i = 1; $i < count($locations) - 2; $i++) {
+                for ($j = $i + 1; $j < count($locations) - 1; $j++) {
+                    // Create new route with swapped segment
+                    $new_locations = $this->perform2OptSwap($locations, $i, $j);
+
+                    // Calculate new distance
+                    $new_distance = $this->calculateRouteDistance($new_locations);
+
+                    // If improvement found, keep it
+                    if ($new_distance < $best_distance) {
+                        $locations = $new_locations;
+                        $best_distance = $new_distance;
+                        $improved = true;
+
+                        // Extract new passenger order
+                        $best_order = [];
+                        for ($k = 1; $k < count($locations) - 1; $k++) {
+                            if (isset($locations[$k]['data'])) {
+                                $best_order[] = $locations[$k]['data'];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $best_order;
+    }
+
+    /**
+     * Perform a 2-opt swap on route segments
+     */
+    private function perform2OptSwap($route, $i, $j) {
+        $new_route = [];
+
+        // Add route from start to i-1
+        for ($k = 0; $k < $i; $k++) {
+            $new_route[] = $route[$k];
+        }
+
+        // Add reversed segment from i to j
+        for ($k = $j; $k >= $i; $k--) {
+            $new_route[] = $route[$k];
+        }
+
+        // Add remaining route from j+1 to end
+        for ($k = $j + 1; $k < count($route); $k++) {
+            $new_route[] = $route[$k];
+        }
+
+        return $new_route;
+    }
+
+    /**
+     * Calculate total distance for a route
+     */
+    private function calculateRouteDistance($locations) {
+        $total_distance = 0;
+
+        for ($i = 0; $i < count($locations) - 1; $i++) {
+            $from = $locations[$i];
+            $to = $locations[$i + 1];
+
+            // Extract coordinates
+            $from_lat = isset($from['lat']) ? $from['lat'] : $from[0];
+            $from_lng = isset($from['lng']) ? $from['lng'] : $from[1];
+            $to_lat = isset($to['lat']) ? $to['lat'] : $to[0];
+            $to_lng = isset($to['lng']) ? $to['lng'] : $to[1];
+
+            $total_distance += $this->calculateDistance($from_lat, $from_lng, $to_lat, $to_lng);
+        }
+
+        return $total_distance;
     }
 
     private function calculateDepartureTime($total_route_time_minutes) {

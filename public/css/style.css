@@ -147,30 +147,200 @@ body {
     background-color: white;
 }
 
-/* Route Map Styles */
-.route-legend {
-    background: rgba(255, 255, 255, 0.95) !important;
-    border: 2px solid #dee2e6;
-    font-size: 0.875rem;
+/* Route Selector Panel Styles */
+.route-selector-control {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
-.route-legend h6 {
-    color: #495057;
-    font-size: 0.9rem;
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 0.25rem;
+/* Remove any focus or hover outlines */
+.route-selector-control:hover,
+.route-selector-control:focus,
+.route-selector-control:active,
+.route-selector-control:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    background: transparent !important;
 }
 
-.route-legend .d-flex {
-    padding: 0.125rem 0;
+/* Remove blue highlights from Leaflet controls */
+.leaflet-control.route-selector-control,
+.leaflet-control.route-selector-control:hover,
+.leaflet-control.route-selector-control:focus,
+.leaflet-control.route-selector-control:active,
+.leaflet-control.route-selector-control:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    background: transparent !important;
 }
 
-.route-legend small {
+/* Remove webkit focus ring */
+.route-selector-control:focus-visible,
+.route-selector-panel:focus-visible,
+.leaflet-control:focus-visible {
+    outline: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove all possible focus styles from the control container */
+.leaflet-control-container .route-selector-control,
+.leaflet-control-container .route-selector-control:hover,
+.leaflet-control-container .route-selector-control:focus,
+.leaflet-control-container .route-selector-control:active {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.route-selector-panel {
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    min-width: 180px;
+    max-width: 220px;
+    overflow: hidden;
+    pointer-events: auto;
+    outline: none !important;
+    border: none !important;
+    border-bottom: none !important;
+}
+
+/* Ensure panel doesn't have hover effects or outlines */
+.route-selector-panel:hover,
+.route-selector-panel:focus,
+.route-selector-panel:active,
+.route-selector-panel:focus-visible {
+    background: rgba(255, 255, 255, 0.97) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
+    outline: none !important;
+    outline-width: 0 !important;
+    border: none !important;
+    border-bottom: none !important;
+}
+
+/* Remove bottom border from last route item */
+.route-selector-item:last-child {
+    border-bottom: none !important;
+}
+
+/* Remove any browser default focus styles */
+.route-selector-control *:focus,
+.route-selector-control *:focus-visible,
+.route-selector-panel *:focus,
+.route-selector-panel *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Specific overrides for any Leaflet default control styles */
+.leaflet-top .leaflet-control,
+.leaflet-top .leaflet-control:hover {
+    margin: 10px;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.route-selector-header {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: none;
+    pointer-events: none;  /* Prevent hover propagation from header */
+}
+
+.route-selector-header h6 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.route-selector-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background: transparent;
+}
+
+/* Custom scrollbar for route selector */
+.route-selector-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.route-selector-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.route-selector-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.route-selector-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.route-selector-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+}
+
+.route-selector-item:hover {
+    background: #f8f9fa;
+    transform: translateX(3px);
+}
+
+.route-selector-item.active {
+    background: linear-gradient(90deg, #e7f3ff 0%, #f0f7ff 100%);
+    border-left: 3px solid #007bff;
+}
+
+.route-selector-item.active .route-number {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.route-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 12px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.driver-name {
+    font-size: 13px;
+    font-weight: 500;
     color: #212529;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 150px;
+    flex-grow: 1;
 }
 
 /* Enhanced polyline visibility */
@@ -289,6 +459,26 @@ body {
 
     .navbar-brand {
         font-size: 1.25rem;
+    }
+
+    /* Adjust route selector for mobile */
+    .route-selector-panel {
+        min-width: 140px;
+        max-width: 180px;
+    }
+
+    .route-selector-item {
+        padding: 8px 10px;
+    }
+
+    .route-number {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+
+    .driver-name {
+        font-size: 12px;
     }
 }
 

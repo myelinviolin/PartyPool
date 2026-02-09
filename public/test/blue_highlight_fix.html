@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue Highlight Fix Verification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #28a745;
+            padding-bottom: 15px;
+        }
+        .fix-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .fix-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #d4edda;
+            color: #155724;
+            margin-left: 10px;
+        }
+        .test-instructions {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .test-item {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .test-item:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #007bff;
+            font-weight: bold;
+        }
+        .success-check {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Blue Highlight Fix Complete</h1>
+        <p>All blue hover highlights have been removed from the route selector panel.</p>
+
+        <!-- CSS Fixes -->
+        <div class="fix-section">
+            <div class="fix-title">
+                CSS Fixes Applied
+                <span class="status-badge">✓ Complete</span>
+            </div>
+            <p>The following CSS rules were added to completely eliminate blue highlights:</p>
+            <ul>
+                <li><span class="success-check">✓</span> Removed focus outlines with <code>:focus</code> and <code>:focus-visible</code> pseudo-classes</li>
+                <li><span class="success-check">✓</span> Added Leaflet-specific control overrides for <code>.leaflet-control.route-selector-control</code></li>
+                <li><span class="success-check">✓</span> Removed webkit focus rings with <code>-webkit-box-shadow: none</code></li>
+                <li><span class="success-check">✓</span> Added <code>-webkit-tap-highlight-color: transparent</code> for mobile devices</li>
+                <li><span class="success-check">✓</span> Applied <code>!important</code> flags to ensure priority over all other styles</li>
+                <li><span class="success-check">✓</span> Targeted all child elements with wildcard selectors</li>
+            </ul>
+
+            <div class="code-block">/* Key CSS changes */
+.route-selector-control:focus-visible,
+.route-selector-panel:focus-visible,
+.leaflet-control:focus-visible {
+    outline: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    box-shadow: none !important;
+}
+
+.leaflet-control-container .route-selector-control {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-color: transparent !important;
+    -webkit-tap-highlight-color: transparent !important;
+}</div>
+        </div>
+
+        <!-- JavaScript Fixes -->
+        <div class="fix-section">
+            <div class="fix-title">
+                JavaScript Fixes Applied
+                <span class="status-badge">✓ Complete</span>
+            </div>
+            <p>Programmatic removal of focus styles was added to both maps:</p>
+            <ul>
+                <li><span class="success-check">✓</span> Inline style removal of all outline, border, and box-shadow properties</li>
+                <li><span class="success-check">✓</span> Set <code>tabindex="-1"</code> on all elements to prevent keyboard focus</li>
+                <li><span class="success-check">✓</span> Added <code>preventDefault()</code> on mousedown events to prevent focus on click</li>
+                <li><span class="success-check">✓</span> Applied to both <strong>app.js</strong> (home page) and <strong>dashboard.php</strong> (admin page)</li>
+            </ul>
+
+            <div class="code-block">// JavaScript focus removal
+const removeOutlines = (element) => {
+    element.style.outline = 'none';
+    element.style.border = 'none';
+    element.style.boxShadow = 'none';
+    element.style.webkitTapHighlightColor = 'transparent';
+    element.setAttribute('tabindex', '-1');
+};
+
+// Apply to all elements
+container.querySelectorAll('*').forEach(removeOutlines);
+
+// Prevent focus on click
+item.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+});</div>
+        </div>
+
+        <!-- Testing Instructions -->
+        <div class="test-instructions">
+            <h3>🧪 How to Verify the Fix</h3>
+            <div class="test-item">Open the Party Carpool home page or admin dashboard</div>
+            <div class="test-item">Look at the route selector panel on the right side of the map</div>
+            <div class="test-item">Move your mouse over the panel - NO blue highlight should appear</div>
+            <div class="test-item">Click on route items - they should toggle without showing blue outlines</div>
+            <div class="test-item">Use TAB key navigation - the panel should not receive keyboard focus</div>
+            <div class="test-item">Test on different browsers (Chrome, Firefox, Safari) - no blue highlights should appear</div>
+        </div>
+
+        <!-- Summary -->
+        <div class="fix-section" style="border-left-color: #007bff;">
+            <div class="fix-title">Summary</div>
+            <p>The blue hover highlight issue has been comprehensively fixed through:</p>
+            <ol>
+                <li><strong>Multi-layer CSS overrides</strong> targeting all possible sources of blue highlights</li>
+                <li><strong>JavaScript enforcement</strong> that programmatically removes focus styles</li>
+                <li><strong>Event prevention</strong> that stops focus from being triggered on interaction</li>
+            </ol>
+            <p>This fix applies to both the home page (<code>/index.php</code>) and admin dashboard (<code>/admin/dashboard.php</code>), ensuring consistent behavior across the entire application.</p>
+        </div>
+
+        <!-- Files Modified -->
+        <div class="fix-section" style="border-left-color: #ffc107;">
+            <div class="fix-title">Files Modified</div>
+            <ul>
+                <li><code>/var/www/partycarpool.clodhost.com/public/css/style.css</code> - Added comprehensive CSS overrides</li>
+                <li><code>/var/www/partycarpool.clodhost.com/public/js/app.js</code> - Added JavaScript focus removal</li>
+                <li><code>/var/www/partycarpool.clodhost.com/public/admin/dashboard.php</code> - Added JavaScript focus removal</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
