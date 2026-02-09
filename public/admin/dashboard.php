@@ -117,12 +117,14 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             height: 100%;
         }
         .participant-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .participant-card .btn-danger {
+        .participant-card .btn-danger,
+        .participant-card .btn-primary {
             opacity: 0.7;
             transition: opacity 0.2s;
             padding: 0.25rem 0.5rem;
         }
-        .participant-card:hover .btn-danger {
+        .participant-card:hover .btn-danger,
+        .participant-card:hover .btn-primary {
             opacity: 1;
         }
         .participant-card .card-body {
@@ -165,6 +167,9 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="ms-auto">
                 <a href="/" class="btn btn-outline-light btn-sm me-2">
                     <i class="fas fa-home"></i> Home Page
+                </a>
+                <a href="/?register=true" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-user-plus"></i> Register
                 </a>
                 <span class="navbar-text text-white me-3">
                     <i class="fas fa-user"></i> <?php echo htmlspecialchars($_SESSION['admin_username']); ?>
@@ -274,11 +279,18 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                                      data-user-name="<?php echo htmlspecialchars($user['name']); ?>"
                                      data-can-drive="<?php echo $user['willing_to_drive'] ? 'true' : 'false'; ?>">
                                     <div class="card-body p-2 position-relative">
-                                        <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
-                                                onclick="removeParticipant(<?php echo $user['id']; ?>, '<?php echo addslashes(htmlspecialchars($user['name'])); ?>')"
-                                                title="Remove participant">
-                                            <i class="fas fa-times"></i>
-                                        </button>
+                                        <div class="position-absolute top-0 end-0 m-1">
+                                            <button class="btn btn-sm btn-primary me-1"
+                                                    onclick="editParticipant(<?php echo htmlspecialchars(json_encode($user)); ?>)"
+                                                    title="Edit participant">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger"
+                                                    onclick="removeParticipant(<?php echo $user['id']; ?>, '<?php echo addslashes(htmlspecialchars($user['name'])); ?>')"
+                                                    title="Remove participant">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
                                         <div class="mb-1">
                                             <strong><?php echo htmlspecialchars($user['name']); ?></strong>
                                             <?php if ($user['willing_to_drive']): ?>
@@ -1365,6 +1377,186 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
         console.log('- checkFormChanged:', typeof window.checkFormChanged);
         console.log('- updateEvent:', typeof window.updateEvent);
         console.log('- storeOriginalValues:', typeof window.storeOriginalValues);
+
+        // Edit participant functionality
+        function editParticipant(userData) {
+            // Populate the modal with user data
+            document.getElementById('editUserId').value = userData.id;
+            document.getElementById('editName').value = userData.name;
+            document.getElementById('editEmail').value = userData.email;
+            document.getElementById('editPhone').value = userData.phone || '';
+            document.getElementById('editAddress').value = userData.address;
+            document.getElementById('editWillingToDrive').value = userData.willing_to_drive ? 'true' : 'false';
+
+            // Show/hide driver fields based on willing_to_drive
+            const driverFields = document.getElementById('editDriverFields');
+            if (userData.willing_to_drive) {
+                driverFields.style.display = 'block';
+                document.getElementById('editVehicleCapacity').value = userData.vehicle_capacity || '';
+                document.getElementById('editVehicleMake').value = userData.vehicle_make || '';
+                document.getElementById('editVehicleModel').value = userData.vehicle_model || '';
+                document.getElementById('editVehicleColor').value = userData.vehicle_color || '';
+            } else {
+                driverFields.style.display = 'none';
+            }
+
+            document.getElementById('editSpecialNotes').value = userData.special_notes || '';
+
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('editParticipantModal'));
+            modal.show();
+        }
+
+        // Handle willing to drive change in edit modal
+        document.getElementById('editWillingToDrive').addEventListener('change', function() {
+            const driverFields = document.getElementById('editDriverFields');
+            if (this.value === 'true') {
+                driverFields.style.display = 'block';
+            } else {
+                driverFields.style.display = 'none';
+            }
+        });
+
+        // Save edited participant
+        async function saveParticipant() {
+            const formData = {
+                id: document.getElementById('editUserId').value,
+                name: document.getElementById('editName').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                address: document.getElementById('editAddress').value,
+                willing_to_drive: document.getElementById('editWillingToDrive').value === 'true',
+                special_notes: document.getElementById('editSpecialNotes').value
+            };
+
+            if (formData.willing_to_drive) {
+                formData.vehicle_capacity = document.getElementById('editVehicleCapacity').value;
+                formData.vehicle_make = document.getElementById('editVehicleMake').value;
+                formData.vehicle_model = document.getElementById('editVehicleModel').value;
+                formData.vehicle_color = document.getElementById('editVehicleColor').value;
+            }
+
+            try {
+                const response = await fetch('edit_participant.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('editParticipantModal')).hide();
+
+                    // Show success message
+                    const successAlert = document.createElement('div');
+                    successAlert.className = 'alert alert-success alert-dismissible fade show position-fixed top-50 start-50 translate-middle success-notification';
+                    successAlert.style.zIndex = '9999';
+                    successAlert.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x me-3"></i>
+                            <div>
+                                <strong>Participant Updated</strong><br>
+                                <small>${formData.name} has been updated successfully.</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(successAlert);
+
+                    // Reload page after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to update participant'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating participant');
+            }
+        }
     </script>
+
+    <!-- Edit Participant Modal -->
+    <div class="modal fade" id="editParticipantModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Participant</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editUserId">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editName" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editEmail" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="editEmail" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editPhone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="editPhone">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editWillingToDrive" class="form-label">Willing to Drive? <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editWillingToDrive" required>
+                                <option value="true">Yes, I can drive</option>
+                                <option value="false">No, I need a ride</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editAddress" class="form-label">Address <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editAddress" required>
+                    </div>
+
+                    <!-- Driver-specific fields -->
+                    <div id="editDriverFields" style="display: none;">
+                        <div class="border rounded p-3 bg-light mb-3">
+                            <h6 class="text-primary">Vehicle Information</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label for="editVehicleCapacity" class="form-label">Passenger Seats</label>
+                                    <input type="number" class="form-control" id="editVehicleCapacity" min="1" max="12">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="editVehicleMake" class="form-label">Make</label>
+                                    <input type="text" class="form-control" id="editVehicleMake">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="editVehicleModel" class="form-label">Model</label>
+                                    <input type="text" class="form-control" id="editVehicleModel">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="editVehicleColor" class="form-label">Color</label>
+                                    <input type="text" class="form-control" id="editVehicleColor">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editSpecialNotes" class="form-label">Special Notes</label>
+                        <textarea class="form-control" id="editSpecialNotes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveParticipant()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

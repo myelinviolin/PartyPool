@@ -16,6 +16,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     setupEventListeners();
     setInterval(refreshData, 30000); // Refresh every 30 seconds
+
+    // Check if we should show the register section (from admin or direct link)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('register') === 'true') {
+        setTimeout(() => {
+            showSection('register');
+        }, 100);
+    }
 });
 
 // Initialize Leaflet Map
