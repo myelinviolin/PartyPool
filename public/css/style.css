@@ -47,9 +47,10 @@ body {
     color: #333;
 }
 
+/* Card Icon colors on Admin Page */
 .card-header i {
     margin-right: 0.5rem;
-    color: #007bff;
+    color: #ffffff;
 }
 
 /* Map Styles */
