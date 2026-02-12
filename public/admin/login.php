@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
 
         <div class="mt-3 text-center text-muted">
-            <small>Default: admin / Admin2024!</small>
+            <small>Default: admin / admin123</small>
         </div>
     </div>
 </body>

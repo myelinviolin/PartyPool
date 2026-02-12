@@ -86,7 +86,12 @@ A complete web application for coordinating carpooling for party events. Users c
 │   └── style.css
 └── js/                 # JavaScript files
     └── app.js
+└── registration/       # Registration page
+    └── registration_dashboard.html
+    └── registration.php
+
 ```
+
 
 ## License
 
