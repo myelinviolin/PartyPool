@@ -41,6 +41,7 @@ $assignments_stmt = $db->prepare($assignments_query);
 $assignments_stmt->bindParam(':event_id', $event_id);
 $assignments_stmt->execute();
 $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
+// Ensure no whitespace or output before DOCTYPE
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -194,19 +195,19 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                             <input type="hidden" id="eventId" value="<?php echo $event_id; ?>">
                             <div class="mb-3">
                                 <label class="form-label">Event Name</label>
-                                <input type="text" class="form-control" id="eventName"
-                                       value="<?php echo htmlspecialchars($event['event_name']); ?>"
-                                       oninput="checkFormChanged()"
-                                       onchange="checkFormChanged()">
+                                    <input type="text" class="form-control" id="eventName"
+                                        value="<?php echo isset($event['event_name']) ? htmlspecialchars($event['event_name']) : ''; ?>"
+                                        oninput="checkFormChanged()"
+                                        onchange="checkFormChanged()">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Destination Address</label>
-                                <input type="text" class="form-control" id="eventAddress"
-                                       value="<?php echo htmlspecialchars($event['event_address']); ?>"
-                                       oninput="checkFormChanged()"
-                                       onchange="checkFormChanged()">
+                                    <input type="text" class="form-control" id="eventAddress"
+                                        value="<?php echo isset($event['event_address']) ? htmlspecialchars($event['event_address']) : ''; ?>"
+                                        oninput="checkFormChanged()"
+                                        onchange="checkFormChanged()">
                                 <small class="text-muted d-block mt-1" id="addressStatus">
-                                    <?php if ($event['event_lat'] && $event['event_lng']): ?>
+                                    <?php if (isset($event['event_lat']) && isset($event['event_lng']) && $event['event_lat'] && $event['event_lng']): ?>
                                         <i class="fas fa-check-circle text-success"></i> Location verified
                                     <?php else: ?>
                                         <i class="fas fa-exclamation-triangle text-warning"></i> Location will be verified on save
@@ -215,17 +216,17 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Event Date</label>
-                                <input type="date" class="form-control" id="eventDate"
-                                       value="<?php echo $event['event_date']; ?>"
-                                       oninput="checkFormChanged()"
-                                       onchange="checkFormChanged()">
+                                    <input type="date" class="form-control" id="eventDate"
+                                        value="<?php echo isset($event['event_date']) ? $event['event_date'] : ''; ?>"
+                                        oninput="checkFormChanged()"
+                                        onchange="checkFormChanged()">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Event Time</label>
-                                <input type="time" class="form-control" id="eventTime"
-                                       value="<?php echo $event['event_time']; ?>"
-                                       oninput="checkFormChanged()"
-                                       onchange="checkFormChanged()">
+                                    <input type="time" class="form-control" id="eventTime"
+                                        value="<?php echo isset($event['event_time']) ? $event['event_time'] : ''; ?>"
+                                        oninput="checkFormChanged()"
+                                        onchange="checkFormChanged()">
                             </div>
                             <button type="button" class="btn btn-secondary w-100" onclick="updateEvent(this)" disabled>
                                 <i class="fas fa-save"></i> Update Event
@@ -338,12 +339,33 @@ $assignments = $assignments_stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/map-utils.js"></script>
     <script src="/js/shared-map-display.js"></script>
+
+    <!-- DEBUG: Output raw HTML source around this script block -->
+    <?php
+    if (isset($_GET['debug_html'])) {
+        $lines = file(__FILE__);
+        $start = max(0, 335 - 20); // 20 lines before script
+        $end = min(count($lines), 335 + 20); // 20 lines after script
+        echo '<pre style="background:#fff;color:#000;max-height:400px;overflow:auto;border:2px solid red;padding:8px;">';
+        for ($i = $start; $i < $end; $i++) {
+            echo htmlspecialchars(sprintf('%04d: %s', $i+1, $lines[$i]));
+        }
+        echo '</pre>';
+    }
+    ?>
     <script>
+        // Ensure all admin dashboard functions are globally available
+        // If you see 'checkFormChanged is not defined', check for earlier JS errors or script loading order.
         // Global error handler for debugging
         window.onerror = function(msg, url, line, col, error) {
             console.error('Global error:', msg, 'at line', line);
             return false;
         };
+
+        // Safety: define checkFormChanged as a no-op if not already defined (should be overwritten below)
+        if (typeof window.checkFormChanged !== 'function') {
+            window.checkFormChanged = function(){};
+        }
 
         // IMPORTANT: Define these in global scope immediately
         var map;

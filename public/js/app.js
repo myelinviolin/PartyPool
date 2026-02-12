@@ -56,8 +56,8 @@ async function loadEventData() {
             document.getElementById('eventLocation').textContent = data.event_address;
         } else {
             document.getElementById('eventName').textContent = 'Event Details Not Set';
-            document.getElementById('eventDateTime').textContent = 'Admin needs to configure event';
-            document.getElementById('eventLocation').textContent = 'Please contact admin';
+            document.getElementById('eventDateTime').textContent = 'TBD';
+            document.getElementById('eventLocation').textContent = 'TBD';
         }
 
         // Update participation stats with correct data

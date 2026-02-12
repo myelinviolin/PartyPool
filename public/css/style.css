@@ -36,7 +36,7 @@ body {
 }
 
 .card-header {
-    background-color: #fff;
+    background-color: #007bff;
     border-bottom: 2px solid #e9ecef;
     font-weight: 600;
 }
@@ -44,7 +44,14 @@ body {
 .card-header h3 {
     margin: 0;
     font-size: 1.25rem;
-    color: #333;
+    color: #ffffff;
+}
+
+/* Participant Card text on Admin Page */
+.card-header h5 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #ffffff;
 }
 
 /* Card Icon colors on Admin Page */
